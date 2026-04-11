@@ -456,12 +456,12 @@ Return ONLY raw JSON matching schema schema { "html": "<full html here>" } Witho
     <title>Resume</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Times New Roman', Times, serif; line-height: 1.25; color: #000; max-width: 800px; margin: 0 auto; background: #fff; font-size: 11px; padding: 10px; }
-        .header { text-align: center; margin-bottom: 6px; }
-        h1 { font-size: 26px; color: #004d40; margin-bottom: 2px; font-weight: bold; }
-        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; font-size: 11px; margin-bottom: 6px; }
+        body { font-family: 'Times New Roman', Times, serif; line-height: 1.35; color: #000; width: 100%; margin: 0; background: #fff; font-size: 11.5px; padding: 0; }
+        .header { text-align: center; margin-bottom: 12px; }
+        h1 { font-size: 28px; color: #004d40; margin-bottom: 4px; font-weight: bold; letter-spacing: -0.01em; }
+        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; font-size: 11px; margin-bottom: 10px; }
         .contact-info span { color: #000; font-weight: 600; }
-        h2.section-title { font-size: 13px; color: #004d40; margin: 8px 0 4px 0; padding-bottom: 2px; border-bottom: 1.5px solid #d4af37; font-weight: bold; text-transform: capitalize; }
+        h2.section-title { font-size: 14px; color: #004d40; margin: 15px 0 6px 0; padding-bottom: 3px; border-bottom: 2px solid #d4af37; font-weight: bold; text-transform: uppercase; }
         .summary p { text-align: justify; margin-bottom: 6px; }
         .summary .summary-label { color: #004d40; font-weight: bold; }
         .skills-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: 4px; column-gap: 20px; margin-bottom: 6px; }
