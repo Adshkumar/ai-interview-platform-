@@ -1,66 +1,275 @@
 const Groq = require("groq-sdk");
-const puppeteer = require("puppeteer");
 const { z } = require("zod");
-const { zodResponseFormat } = require("openai/helpers/zod");
+const { zodToJsonSchema } = require("zod-to-json-schema");
+const puppeteer = require("puppeteer");
 
-// Lazy load Groq client
+// Lazy Groq client — only initializes when first AI call is made
+// Prevents server crash at startup if GROQ_API_KEY env var is missing
+let _groq = null;
 function getGroqClient() {
-    if (!process.env.GROQ_API_KEY) {
-        // console.error("GROQ_API_KEY is missing in session environment variables.");
-        throw new Error("Server Misconfiguration: GROQ_API_KEY is required.");
+    if (!_groq) {
+        if (!process.env.GROQ_API_KEY) {
+            throw new Error("GROQ_API_KEY environment variable is not set. Please add it to your Render dashboard.");
+        }
+        _groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     }
-    return new Groq({
-        apiKey: process.env.GROQ_API_KEY,
-    });
+    return _groq;
 }
 
+function parseAIJson(text) {
+    const cleaned = text.replace(/```json|```/g, "").trim()
+    return JSON.parse(cleaned)
+}
+
+const interviewReportSchema = z.object({
+    matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
+    technicalQuestions: z.array(z.object({
+        question: z.string().describe("The technical question can be asked in the interview"),
+        intention: z.string().describe("The intention of interviewer behind asking this question"),
+        answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
+    })).describe("Technical questions that can be asked in the interview along with their intention and how to answer them"),
+    behavioralQuestions: z.array(z.object({
+        question: z.string().describe("The technical question can be asked in the interview"),
+        intention: z.string().describe("The intention of interviewer behind asking this question"),
+        answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
+    })).describe("Behavioral questions that can be asked in the interview along with their intention and how to answer them"),
+    skillGaps: z.array(z.object({
+        skill: z.string().describe("The skill which the candidate is lacking"),
+        severity: z.enum(["low", "medium", "high"]).describe("The severity of this skill gap, i.e. how important is this skill for the job and how much it can impact the candidate's chances")
+    })).describe("List of skill gaps in the candidate's profile along with their severity"),
+    preparationPlan: z.array(z.object({
+        day: z.number().describe("The day number in the preparation plan, starting from 1"),
+        focus: z.string().describe("The main focus of this day in the preparation plan, e.g. data structures, system design, mock interviews etc."),
+        tasks: z.array(z.string()).describe("List of tasks to be done on this day to follow the preparation plan, e.g. read a specific book or article, solve a set of problems, watch a video etc.")
+    })).describe("A day-wise preparation plan for the candidate to follow in order to prepare for the interview effectively"),
+    title: z.string().describe("The title of the job for which the interview report is generated"),
+})
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
-    const groq = getGroqClient();
 
-    const resumeExtractionSchema = z.object({
-        technicalQuestions: z.array(z.string()).describe("5-7 highly technical questions specifically based on the candidate's resume and target job role."),
-        behavioralQuestions: z.array(z.string()).describe("3-4 behavioral or situational questions based on the job description."),
-        skillGaps: z.array(z.string()).describe("List of skills mentioned in the job description that are missing from the resume."),
-        preparationPlan: z.array(z.string()).describe("A step-by-step 3-day roadmap for the user to bridge these skill gaps and prepare for this specific interview.")
-    });
+    const prompt = `Generate a comprehensive interview report for a candidate with the following details:
 
-    const prompt = `You are an expert technical recruiter and interviewer. Analyze the following details provided by a user:
-
-Resume Text: ${resume}
+Resume: ${resume}
 Self Description: ${selfDescription}
 Job Description: ${jobDescription}
 
-Generate a comprehensive interview preparation report. The output must be a valid JSON object matching the requested schema. Ensure the questions are challenging and the preparation plan is actionable within 3 days.`;
+IMPORTANT INSTRUCTIONS:
+1. You MUST generate 5-7 technical questions with COMPLETE answers
+2. You MUST generate 4-6 behavioral questions with COMPLETE answers
+3. Every question MUST have ALL three fields: question, intention, and answer
+4. The "answer" field must be detailed and helpful (at least 3-4 sentences)
+5. Do not leave any field empty or missing
 
-    try {
-        const response = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: "You are an elite technical interviewer. ALWAYS provide valid JSON responses following the requested format EXACTLY."
-                },
-                {
-                    role: "user",
-                    content: prompt
+For technicalQuestions:
+- Generate questions based on the job requirements and candidate's resume
+- Each question should test specific technical skills
+- Provide detailed intention and COMPLETE model answer
+
+For behavioralQuestions:
+- Generate questions using the STAR method
+- Questions should assess soft skills, teamwork, leadership
+- Provide detailed intention and COMPLETE model answer
+
+For skillGaps:
+- Identify 3-5 skills the candidate is missing or needs to improve
+- Rate each gap's severity (low/medium/high)
+- Format each skill gap as an object with "skill" and "severity" fields
+
+For preparationPlan:
+- Create a 7-14 day preparation plan
+- Each day should have a clear focus and 2-4 specific tasks
+
+Return ONLY raw JSON. Do not wrap it in markdown.
+
+Use this schema:
+${JSON.stringify(zodToJsonSchema(interviewReportSchema))}
+`
+
+    const response = await getGroqClient().chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+            {
+                role: "system",
+                content: "You are an expert interview coach. You MUST generate COMPLETE data with ALL fields. Every question MUST have a detailed answer field. Never leave any field empty. For skillGaps, always include both 'skill' and 'severity' fields for each item."
+            },
+            {
+                role: "user",
+                content: prompt
+            }
+        ],
+        temperature: 0.7,
+        max_tokens: 4096
+    })
+
+    const text = response.choices[0].message.content
+    let data = parseAIJson(text)
+
+    if (!data.title || data.title.trim() === "") {
+        data.title = "Generated Interview Report"
+    }
+
+    if (typeof data.matchScore !== 'number' || isNaN(data.matchScore)) {
+        const hasTechnical = data.technicalQuestions?.length || 0
+        const hasBehavioral = data.behavioralQuestions?.length || 0
+        const hasSkillGaps = data.skillGaps?.length || 0
+
+        data.matchScore = Math.min(95, Math.max(70, 70 + (hasTechnical * 2) + (hasBehavioral * 2) + (hasSkillGaps * 1)))
+    }
+
+    data.matchScore = Math.min(100, Math.max(0, data.matchScore))
+    if (data.technicalQuestions && Array.isArray(data.technicalQuestions)) {
+        data.technicalQuestions = data.technicalQuestions.map((q, index) => ({
+            question: q.question || `Technical Question ${index + 1}`,
+            intention: q.intention || "To assess technical knowledge and problem-solving skills",
+            answer: q.answer || "This question tests your understanding of core concepts. Make sure to explain your thought process clearly and provide examples from your experience."
+        }))
+    } else {
+        data.technicalQuestions = [
+            {
+                question: "Explain the difference between REST and GraphQL",
+                intention: "To assess understanding of API architectures",
+                answer: "REST is an architectural style with multiple endpoints for different resources. GraphQL is a query language with a single endpoint that allows clients to request specific data. REST is simpler and uses HTTP methods, while GraphQL provides more flexibility and reduces over-fetching. Choose REST for simple CRUD operations and GraphQL for complex data requirements."
+            },
+            {
+                question: "How do you handle state management in React?",
+                intention: "To evaluate frontend architecture knowledge",
+                answer: "For local component state, I use useState. For shared state between components, I use Context API. For complex applications with global state, I use Redux or Zustand. I also use React Query for server state management. The choice depends on the application complexity and requirements."
+            }
+        ]
+    }
+
+    if (data.behavioralQuestions && Array.isArray(data.behavioralQuestions)) {
+        data.behavioralQuestions = data.behavioralQuestions.map((q, index) => ({
+            question: q.question || `Behavioral Question ${index + 1}`,
+            intention: q.intention || "To assess soft skills and past experiences",
+            answer: q.answer || "Use the STAR method: Situation, Task, Action, Result. Describe the context, your role, the actions you took, and the positive outcome. Focus on your contributions and what you learned."
+        }))
+    } else {
+        data.behavioralQuestions = [
+            {
+                question: "Tell me about a time you had to deal with a difficult team member",
+                intention: "To assess conflict resolution skills",
+                answer: "Use STAR method. Situation: A team member disagreed with my approach. Task: Needed to complete the project on time. Action: I scheduled a one-on-one meeting, listened to their concerns, and found a compromise. Result: We delivered the project successfully and improved our working relationship."
+            },
+            {
+                question: "Describe a project you're most proud of",
+                intention: "To understand work quality and passion",
+                answer: "Choose a relevant project. Explain the challenges, your role, the technologies used, and the impact. Focus on what you learned and how it demonstrates your skills. Quantify results where possible."
+            }
+        ]
+    }
+
+    if (data.skillGaps && Array.isArray(data.skillGaps)) {
+        data.skillGaps = data.skillGaps.map(gap => {
+            if (typeof gap === 'string') {
+                return {
+                    skill: gap,
+                    severity: "medium"
+                };
+            }
+            if (!gap.skill) {
+                const skillName = gap.name || gap.title || gap.skillName || gap.skill_name;
+                if (skillName) {
+                    return {
+                        skill: skillName,
+                        severity: gap.severity || "medium"
+                    };
                 }
-            ],
-            model: "llama-3.3-70b-versatile",
-            response_format: zodResponseFormat(resumeExtractionSchema, "report"),
-            temperature: 0.1,
-            max_tokens: 2048
+                return {
+                    skill: "Unknown Skill",
+                    severity: gap.severity || "medium"
+                };
+            }
+            const validSeverity = gap.severity && ["low", "medium", "high"].includes(gap.severity)
+                ? gap.severity
+                : "medium";
+
+            return {
+                skill: gap.skill,
+                severity: validSeverity
+            };
+        }).filter(gap => gap.skill && gap.skill.trim() !== "");
+    }
+
+    if (!data.skillGaps || !Array.isArray(data.skillGaps) || data.skillGaps.length === 0) {
+        data.skillGaps = [
+            { skill: "System Design", severity: "high" },
+            { skill: "Database Optimization", severity: "medium" },
+            { skill: "Testing Practices", severity: "low" }
+        ]
+    }
+
+    if (!data.preparationPlan || !Array.isArray(data.preparationPlan) || data.preparationPlan.length === 0) {
+        data.preparationPlan = [
+            {
+                day: 1,
+                focus: "Data Structures Review",
+                tasks: [
+                    "Review arrays, linked lists, and trees",
+                    "Solve 5 medium LeetCode problems",
+                    "Practice explaining solutions out loud"
+                ]
+            },
+            {
+                day: 2,
+                focus: "System Design Basics",
+                tasks: [
+                    "Study scalability concepts",
+                    "Design a URL shortener",
+                    "Understand load balancing and caching"
+                ]
+            },
+            {
+                day: 3,
+                focus: "Behavioral Preparation",
+                tasks: [
+                    "Prepare 5 STAR stories",
+                    "Practice common behavioral questions",
+                    "Research company values and culture"
+                ]
+            }
+        ]
+    }
+
+    return data
+}
+
+async function generatePdfFromHtml(htmlContent) {
+    let browser;
+    try {
+        console.log("Launching Puppeteer...");
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process'
+            ]
         });
 
-        const content = response.choices[0].message.content;
-        return JSON.parse(content);
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true,
+            margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" }
+        });
+
+        await browser.close();
+        return pdfBuffer;
 
     } catch (error) {
-        console.error("Interview report generation error:", error);
-        throw error;
+        console.error("PDF Engine Error Detail:", error);
+        if (browser) await browser.close();
+        throw new Error(`PDF Engine Error: ${error.message}`);
     }
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
-    const groq = getGroqClient();
 
     const resumePdfSchema = z.object({
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
@@ -74,27 +283,148 @@ Job Description: ${jobDescription}
 
 The response should be a JSON object with a single field "html" which contains the COMPLETE HTML content of the resume.
 
-Rules:
-1. Use professional 'Times New Roman' styling.
-2. Use dark green (#004d40) for headings and gold (#d4af37) for thin borders/decorations.
-3. The layout MUST take up exactly one full A4 page.
-4. Scale up the font sizes and line heights so there is NO large blank space at the bottom.
-5. Provide detailed bullet points for experience and projects.
-6. DO NOT include placeholders. Use the data provided.
+IMPORTANT DESIGN REQUIREMENTS:
+1. EXTREMELY STRICT LAYOUT. You MUST use exactly this structure and CSS.
+2. The entire document MUST fit on ONE single page. Do NOT make it verbose. Compress bullet points to 2-3 precise lines per item.
 
-Required HTML structure for consistency:
-- <h1>Name</h1>
-- .contact-info with icons or text
-- .section-title (Education, Experience, Projects)
-- .two-column layout for title and date/location`;
+REQUIRED CSS AND HTML TEMPLATE (USE THIS EXACTLY):
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.25;
+            color: #000;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            font-size: 11px;
+        }
+        .header { text-align: center; margin-bottom: 6px; }
+        h1 {
+            font-size: 26px;
+            color: #004d40; /* Teal/Blue color */
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+        .contact-info span { color: #000; font-weight: 600; }
+        h2.section-title {
+            font-size: 13px;
+            color: #004d40;
+            margin: 8px 0 4px 0;
+            padding-bottom: 2px;
+            border-bottom: 1.5px solid #d4af37; /* Gold line */
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+        .summary p { text-align: justify; margin-bottom: 6px; }
+        .summary .summary-label { color: #004d40; font-weight: bold; }
+        
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 4px;
+            column-gap: 20px;
+            margin-bottom: 6px;
+        }
+        .skill-item { font-size: 11px; }
+        .skill-item .bold { font-weight: bold; }
+
+        .two-column {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .two-column .left .bold { font-weight: bold; font-size: 12px; }
+        .two-column .left .italic { font-style: italic; font-size: 11px; }
+        .two-column .right { text-align: right; }
+        
+        ul { margin-left: 18px; margin-bottom: 6px; }
+        li { font-size: 11px; margin-bottom: 2px; text-align: justify; }
+        li .bold { font-weight: bold; } /* Use class="bold" to highlight important words in li */
+        
+        .item-container { margin-bottom: 6px; }
+        .sub-desc { font-size: 11px; font-style: italic; margin-bottom: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>[Candidate Name]</h1>
+        <div class="contact-info">
+            <span>✉ [Email]</span> <span>|</span> <span>github.com/[github]</span> <span>|</span> <span>[linkedin/portfolio]</span>
+        </div>
+    </div>
+
+    <!-- For Summary -->
+    <div class="summary">
+        <p><span class="summary-label">Summary — [Role Title]</span> [Short 2-3 line summary focusing on robust details]</p>
+    </div>
+
+    <h2 class="section-title">Technical Skills</h2>
+    <div class="skills-grid">
+        <div class="skill-item"><span class="bold">Frontend:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Backend:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Languages:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Database:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Tools:</span> [Skills]</div>
+    </div>
+
+    <h2 class="section-title">Education</h2>
+    <div class="item-container">
+        <div class="two-column">
+            <div class="left"><span class="bold">[Institution]</span><br><span class="italic">[Degree]</span></div>
+            <div class="right">[Location]<br>[Year]</div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Experience</h2>
+    <div class="item-container">
+        <div class="two-column">
+            <div class="left"><span class="bold">[Company]</span><br><span class="italic">[Role]</span></div>
+            <div class="right">[Dates]</div>
+        </div>
+        <ul>
+            <li><span class="bold">Action verb</span> descriptive result.</li>
+        </ul>
+    </div>
+
+    <h2 class="section-title">Projects</h2>
+    <div class="item-container">
+        <div class="two-column">
+            <div class="left"><span class="bold">[Project Name]</span></div>
+            <div class="right italic">[Tech Stack]</div>
+        </div>
+        <ul>
+            <li><span class="bold">Action verb</span> descriptive result focusing on impact.</li>
+        </ul>
+    </div>
+
+    <h2 class="section-title">Achievements</h2>
+    <ul>
+        <li><span class="bold">[Achievement Title]:</span> [Detail]</li>
+    </ul>
+</body>
+</html>
+
+Return ONLY raw JSON matching schema schema { "html": "<full html here>" } Without markdown blocks.`;
 
     try {
-        const response = await groq.chat.completions.create({
+        const response = await getGroqClient().chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [
                 {
                     role: "system",
-                    content: "You are an elite, highly precise resume formatter. You MUST strictly obey the specified CSS layout. Use large font sizes and generous line-height to fill a full A4 page vertically. ALWAYS return valid JSON."
+                    content: "You are an elite, highly precise resume formatter. You MUST strictly obey the specified CSS layout, do NOT change colors or border styles, use exactly the HTML structures shown. Fit everything into concise, dense text to keep it at 1 page. ALWAYS return valid JSON."
                 },
                 {
                     role: "user",
@@ -117,6 +447,7 @@ Required HTML structure for consistency:
             jsonContent = JSON.parse(cleaned)
         } catch (parseError) {
             console.error("JSON Parse Error:", parseError)
+            // Just use the explicit CSS fallback we gave it!
             jsonContent = {
                 html: `<!DOCTYPE html>
 <html>
@@ -125,25 +456,25 @@ Required HTML structure for consistency:
     <title>Resume</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Times New Roman', Times, serif; line-height: 1.6; color: #000; width: 100%; margin: 0; background: #fff; font-size: 14.5px; padding: 0; }
-        .header { text-align: center; margin-bottom: 30px; }
-        h1 { font-size: 42px; color: #004d41; margin-bottom: 10px; font-weight: bold; letter-spacing: -0.01em; }
-        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; font-size: 13px; margin-bottom: 15px; }
+        body { font-family: 'Times New Roman', Times, serif; line-height: 1.5; color: #000; width: 100%; margin: 0; background: #fff; font-size: 13.5px; padding: 0; }
+        .header { text-align: center; margin-bottom: 24px; }
+        h1 { font-size: 38px; color: #004d40; margin-bottom: 8px; font-weight: bold; letter-spacing: -0.01em; }
+        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; font-size: 12px; margin-bottom: 12px; }
         .contact-info span { color: #000; font-weight: 600; }
-        h2.section-title { font-size: 20px; color: #004d41; margin: 30px 0 12px 0; padding-bottom: 6px; border-bottom: 3px solid #d4af37; font-weight: bold; text-transform: uppercase; }
-        .summary p { text-align: justify; margin-bottom: 15px; }
-        .summary .summary-label { color: #004d41; font-weight: bold; }
-        .skills-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: 10px; column-gap: 30px; margin-bottom: 15px; }
-        .skill-item { font-size: 14px; }
+        h2.section-title { font-size: 18px; color: #004d40; margin: 25px 0 10px 0; padding-bottom: 5px; border-bottom: 2.5px solid #d4af37; font-weight: bold; text-transform: uppercase; }
+        .summary p { text-align: justify; margin-bottom: 10px; }
+        .summary .summary-label { color: #004d40; font-weight: bold; }
+        .skills-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: 8px; column-gap: 25px; margin-bottom: 12px; }
+        .skill-item { font-size: 13px; }
         .skill-item .bold { font-weight: bold; }
         .two-column { display: flex; justify-content: space-between; align-items: baseline; }
-        .two-column .left .bold { font-weight: bold; font-size: 16px; }
-        .two-column .left .italic { font-style: italic; font-size: 14px; }
+        .two-column .left .bold { font-weight: bold; font-size: 14px; }
+        .two-column .left .italic { font-style: italic; font-size: 13px; }
         .two-column .right { text-align: right; }
-        ul { margin-left: 25px; margin-bottom: 15px; }
-        li { font-size: 14px; margin-bottom: 8px; text-align: justify; }
+        ul { margin-left: 20px; margin-bottom: 12px; }
+        li { font-size: 13px; margin-bottom: 6px; text-align: justify; }
         li .bold { font-weight: bold; }
-        .item-container { margin-bottom: 15px; }
+        .item-container { margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -177,33 +508,34 @@ Required HTML structure for consistency:
     <div class="item-container">
         <div class="two-column"><div class="left"><span class="bold">AKM TECHIE</span><br><span class="italic">Frontend Web Development Intern</span></div><div class="right">June 2025 – July 2025</div></div>
         <ul>
-            <li><span class="bold">Developed</span> a multi-page responsive website with modern UI components including admin dashboard, client portal, and service pages. Focused on user-centric design principles.</li>
-            <li><span class="bold">Created custom CSS styling</span> ensuring visual consistency and responsive design across all devices. utilized SASS for manageable style architecture.</li>
-            <li><span class="bold">Implemented interactive user interfaces</span> for contact forms, service demonstrations, and business statistics display. Improved user engagement by 25%.</li>
+            <li><span class="bold">Developed</span> a multi-page responsive website with modern UI components including admin dashboard, client portal, and service pages</li>
+            <li><span class="bold">Created custom CSS styling</span> ensuring visual consistency and responsive design across all devices</li>
+            <li><span class="bold">Implemented interactive user interfaces</span> for contact forms, service demonstrations, and business statistics display</li>
         </ul>
     </div>
 
     <h2 class="section-title">Projects</h2>
     <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">AI Interview Preparation Platform</span></div><div class="right italic">React.js, Node.js, Express.js, MongoDB, JWT</div></div>
+        <div class="two-column"><div class="left"><span class="bold">AI Interview Preparation Platform</span></div><div class="right italic">React.js, Node.js, Express.js, MongoDB, JWT, REST API</div></div>
         <ul>
-            <li><span class="bold">Engineered a full-stack AI-powered interview preparation platform</span> enabling resume uploads and automated interview report generation.</li>
-            <li><span class="bold">Built a modular MVC backend architecture</span> ensures high scalability and maintainable code for future feature integrations.</li>
-            <li><span class="bold">Integrated JWT authentication</span> for secure user sessions and API access across the ecosystem.</li>
+            <li><span class="bold">Engineered a full-stack AI-powered interview preparation platform</span> enabling resume uploads and automated interview report generation from job descriptions</li>
+            <li><span class="bold">Built a modular MVC backend architecture</span> (controllers, routes, models, middleware, services) ensuring scalability and maintainability</li>
+            <li><span class="bold">Integrated JWT authentication with protected routes</span> for secure user sessions and API access</li>
+            <li><span class="bold">Leveraged AI services</span> for resume analysis and intelligent interview report generation</li>
         </ul>
     </div>
     <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">Uber-Backend System</span></div><div class="right italic">Node.js, Express.js, MongoDB, Socket.IO</div></div>
+        <div class="two-column"><div class="left"><span class="bold">Uber-Backend System</span></div><div class="right italic">Node.js, Express.js, MongoDB, Socket.IO, Razorpay</div></div>
         <ul>
-            <li><span class="bold">Designed and developed a scalable ride-booking backend system</span> with real-time ride tracking and driver matching.</li>
-            <li><span class="bold">Implemented Socket.IO</span> for low-latency live communication between users and drivers.</li>
+            <li><span class="bold">Designed and developed a scalable ride-booking backend system</span> with user authentication, ride lifecycle management, and driver assignment</li>
+            <li><span class="bold">Implemented real-time communication using Socket.IO</span> for ride requests, driver notifications, and live status updates</li>
         </ul>
     </div>
 
     <h2 class="section-title">Achievements</h2>
     <ul>
-        <li><span class="bold">LeetCode Badge:</span> Recognized for solving 200+ complex algorithmic problems with high efficiency.</li>
-        <li><span class="bold">National Level Hackathon:</span> Finalist in the state-level coding competition for building social impact solutions.</li>
+        <li><span class="bold">LeetCode Badge:</span> Earned problem-solving badge for consistent performance and coding proficiency</li>
+        <li><span class="bold">Project Portfolio:</span> Delivered 4+ full-stack projects with real-time features and production-ready code</li>
     </ul>
 </body>
 </html>`
@@ -211,6 +543,11 @@ Required HTML structure for consistency:
         }
 
         const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
+
+        if (!pdfBuffer || pdfBuffer.length === 0) {
+            throw new Error("Generated PDF buffer is empty");
+        }
+
         return pdfBuffer;
 
     } catch (error) {
@@ -219,32 +556,4 @@ Required HTML structure for consistency:
     }
 }
 
-async function generatePdfFromHtml(htmlContent) {
-    let browser;
-    try {
-        console.log("Launching Puppeteer for final render...");
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process']
-        });
-
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-
-        const pdfBuffer = await page.pdf({
-            format: "A4",
-            printBackground: true,
-            margin: { top: "15mm", bottom: "15mm", left: "15mm", right: "15mm" }
-        });
-
-        await browser.close();
-        return pdfBuffer;
-
-    } catch (error) {
-        console.error("PDF Engine Error Detail:", error);
-        if (browser) await browser.close();
-        throw new Error(`PDF Engine Error: ${error.message}`);
-    }
-}
-
-module.exports = { generateInterviewReport, generateResumePdf };
+module.exports = { generateInterviewReport, generateResumePdf }
