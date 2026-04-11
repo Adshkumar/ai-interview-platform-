@@ -134,35 +134,43 @@
         }
     }
 
-    .primary-button {
-        margin-top: 0.5rem;
-        width: 100%;
-        padding: 0.85rem;
-        border-radius: 0.75rem;
-        background: linear-gradient(135deg, #d20d3b 0%, #a0062a 100%);
-        color: white;
-        font-size: 1rem;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(210, 13, 59, 0.3);
+}
 
-        &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(210, 13, 59, 0.5);
-        }
+.primary-button {
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #d20d3b 0%, #a0062a 100%);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(210, 13, 59, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 
-        &:active {
-            transform: translateY(0);
-        }
-        
-        &:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(210, 13, 59, 0.5);
     }
+
+    &:active {
+        transform: translateY(0);
+    }
+    
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+.auth-main {
 
     .error-message {
         background: rgba(210, 13, 59, 0.12);
