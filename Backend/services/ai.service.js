@@ -237,60 +237,35 @@ ${JSON.stringify(zodToJsonSchema(interviewReportSchema))}
 async function generatePdfFromHtml(htmlContent) {
     let browser;
     try {
+        console.log("Launching Puppeteer...");
         browser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
                 '--disable-gpu',
-                '--window-size=1200,800',
-                '--single-process',
                 '--no-zygote',
+                '--single-process'
             ]
         });
 
         const page = await browser.newPage();
-
-        await page.setViewport({
-            width: 1200,
-            height: 800
-        });
-
-        await page.setContent(htmlContent, {
-            waitUntil: "networkidle0",
-            timeout: 30000
-        });
-
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+        
         const pdfBuffer = await page.pdf({
             format: "A4",
             printBackground: true,
-            margin: {
-                top: "10mm",
-                bottom: "10mm",
-                left: "15mm",
-                right: "15mm"
-            }
+            margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" }
         });
 
-        const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
-
-        console.log("PDF Buffer created:", {
-            isBuffer: Buffer.isBuffer(buffer),
-            length: buffer.length,
-            signature: buffer.slice(0, 4).toString()
-        });
-
-        return buffer;
+        await browser.close();
+        return pdfBuffer;
 
     } catch (error) {
-        console.error("PDF Generation Error:", error);
-        throw error;
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
+        console.error("PDF Engine Error Detail:", error);
+        if (browser) await browser.close();
+        throw new Error(`PDF Engine Error: ${error.message}`);
     }
 }
 
