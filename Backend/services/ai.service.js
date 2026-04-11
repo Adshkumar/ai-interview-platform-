@@ -3,11 +3,18 @@ const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 const puppeteer = require("puppeteer");
 
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
-})
-
-// console.log("GROQ API KEY:", process.env.GROQ_API_KEY);
+// Lazy Groq client — only initializes when first AI call is made
+// Prevents server crash at startup if GROQ_API_KEY env var is missing
+let _groq = null;
+function getGroqClient() {
+    if (!_groq) {
+        if (!process.env.GROQ_API_KEY) {
+            throw new Error("GROQ_API_KEY environment variable is not set. Please add it to your Render dashboard.");
+        }
+        _groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    }
+    return _groq;
+}
 
 function parseAIJson(text) {
     const cleaned = text.replace(/```json|```/g, "").trim()
@@ -78,7 +85,7 @@ Use this schema:
 ${JSON.stringify(zodToJsonSchema(interviewReportSchema))}
 `
 
-    const response = await groq.chat.completions.create({
+    const response = await getGroqClient().chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
             {
@@ -437,7 +444,7 @@ REQUIRED CSS AND HTML TEMPLATE (USE THIS EXACTLY):
 Return ONLY raw JSON matching schema schema { "html": "<full html here>" } Without markdown blocks.`;
 
     try {
-        const response = await groq.chat.completions.create({
+        const response = await getGroqClient().chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [
                 {
