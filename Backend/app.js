@@ -10,19 +10,26 @@ const interviewRouter = require('./routes/interview.routes');
 
 var app = express();
 
+// Support multiple comma-separated FRONTEND URLs via env var
+const envOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
+    : [];
+
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:4173',
-    process.env.FRONTEND_URL,
+    'https://ai-interview-platform-xi-ashen.vercel.app',
+    ...envOrigins,
 ].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc.)
+        // Allow requests with no origin (Postman, curl, mobile apps, Render health checks)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
+        // Allow any vercel.app preview/deployment URL for this project
+        if (origin.endsWith('.vercel.app')) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        console.warn('CORS blocked origin:', origin);
         return callback(new Error('CORS not allowed for: ' + origin));
     },
     credentials: true,
