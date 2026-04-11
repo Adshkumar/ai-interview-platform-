@@ -148,47 +148,49 @@ async function getAllInterviewReportsController(req, res) {
  */
 async function generateResumePdfController(req, res) {
     try {
-
-        const { interviewReportId } = req.params
+        const { interviewReportId } = req.params;
 
         const interviewReport = await interviewReportModel.findOne({
             _id: interviewReportId,
             user: req.user.id
-        })
+        });
 
         if (!interviewReport) {
-            return res.status(404).json({
-                message: "Interview report not found."
-            })
+            return res.status(404).json({ message: "Interview report not found." });
         }
 
-        const { resume, jobDescription, selfDescription } = interviewReport
+        const { resume, jobDescription, selfDescription } = interviewReport;
+
+        console.log("Generating Resume PDF for:", interviewReportId);
 
         const pdfBuffer = await generateResumePdf({
             resume,
             jobDescription,
             selfDescription
-        })
+        });
 
-        // Check if pdfBuffer is valid
         if (!pdfBuffer || pdfBuffer.length === 0) {
-            return res.status(500).json({
-                message: "Generated PDF is empty"
-            });
+            console.error("PDF generation returned empty buffer");
+            return res.status(500).json({ message: "Failed to generate valid PDF buffer." });
         }
 
-        // Set proper headers for PDF download
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=resume_${interviewReportId}.pdf`);
-        res.setHeader('Content-Length', pdfBuffer.length);
-        res.setHeader('Cache-Control', 'no-cache');
+        console.log("PDF generated successfully. Size:", pdfBuffer.length);
 
-        // Send the PDF buffer
-        return res.send(pdfBuffer);
+        // ONLY set headers if we HAVE the buffer
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="resume_${interviewReportId}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        return res.end(pdfBuffer); // Use .end() for binary buffers
 
     } catch (error) {
-
-        console.error("Error in generateResumePdfController:", error);
+        console.error("Resume PDF Controller Error:", error);
+        
+        // If we already started sending headers, we can't send JSON anymore
+        if (res.headersSent) {
+            console.error("Headers already sent, cannot send JSON error.");
+            return res.end();
+        }
 
         res.status(500).json({
             message: "Failed to generate resume PDF",
