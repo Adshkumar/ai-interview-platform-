@@ -251,8 +251,8 @@ async function generatePdfFromHtml(htmlContent) {
             format: "A4",
             printBackground: true,
             margin: {
-                top: "20mm",
-                bottom: "20mm",
+                top: "10mm",
+                bottom: "10mm",
                 left: "15mm",
                 right: "15mm"
             }
@@ -284,34 +284,148 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
     })
 
-    const prompt = `Generate a professional resume HTML for a candidate with the following details:
+    const prompt = `Generate a highly professional, 1-page ATS-friendly resume HTML for a candidate with the following details:
 
 Resume Text: ${resume}
 Self Description: ${selfDescription}
 Job Description: ${jobDescription}
 
-The response should be a JSON object with a single field "html" which contains the HTML content of the resume.
+The response should be a JSON object with a single field "html" which contains the COMPLETE HTML content of the resume.
 
-IMPORTANT REQUIREMENTS:
-1. The HTML must be self-contained with inline CSS (no external stylesheets)
-2. Use modern, clean, professional design
-3. Format the resume to be ATS-friendly
-4. Include sections: Summary, Skills, Experience, Education, Projects, Achievements
-5. Make it 1-2 pages when converted to PDF
-6. Use proper HTML structure with semantic tags
-7. Escape all special characters properly
-8. Return ONLY valid JSON - no markdown, no explanations
+IMPORTANT DESIGN REQUIREMENTS:
+1. EXTREMELY STRICT LAYOUT. You MUST use exactly this structure and CSS.
+2. The entire document MUST fit on ONE single page. Do NOT make it verbose. Compress bullet points to 2-3 precise lines per item.
 
-Example structure:
-{
-  "html": "<!DOCTYPE html><html><head><style>body { font-family: Arial; }</style></head><body>[resume content]</body></html>"
-}
+REQUIRED CSS AND HTML TEMPLATE (USE THIS EXACTLY):
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.25;
+            color: #000;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            font-size: 11px;
+        }
+        .header { text-align: center; margin-bottom: 6px; }
+        h1 {
+            font-size: 26px;
+            color: #004d40; /* Teal/Blue color */
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+        .contact-info span { color: #000; font-weight: 600; }
+        h2.section-title {
+            font-size: 13px;
+            color: #004d40;
+            margin: 8px 0 4px 0;
+            padding-bottom: 2px;
+            border-bottom: 1.5px solid #d4af37; /* Gold line */
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+        .summary p { text-align: justify; margin-bottom: 6px; }
+        .summary .summary-label { color: #004d40; font-weight: bold; }
+        
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 4px;
+            column-gap: 20px;
+            margin-bottom: 6px;
+        }
+        .skill-item { font-size: 11px; }
+        .skill-item .bold { font-weight: bold; }
 
-Return ONLY raw JSON. Do not wrap it in markdown.
+        .two-column {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .two-column .left .bold { font-weight: bold; font-size: 12px; }
+        .two-column .left .italic { font-style: italic; font-size: 11px; }
+        .two-column .right { text-align: right; }
+        
+        ul { margin-left: 18px; margin-bottom: 6px; }
+        li { font-size: 11px; margin-bottom: 2px; text-align: justify; }
+        li .bold { font-weight: bold; } /* Use class="bold" to highlight important words in li */
+        
+        .item-container { margin-bottom: 6px; }
+        .sub-desc { font-size: 11px; font-style: italic; margin-bottom: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>[Candidate Name]</h1>
+        <div class="contact-info">
+            <span>✉ [Email]</span> <span>|</span> <span>github.com/[github]</span> <span>|</span> <span>[linkedin/portfolio]</span>
+        </div>
+    </div>
 
-Use this schema:
-${JSON.stringify(zodToJsonSchema(resumePdfSchema))}
-`
+    <!-- For Summary -->
+    <div class="summary">
+        <p><span class="summary-label">Summary — [Role Title]</span> [Short 2-3 line summary focusing on robust details]</p>
+    </div>
+
+    <h2 class="section-title">Technical Skills</h2>
+    <div class="skills-grid">
+        <div class="skill-item"><span class="bold">Frontend:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Backend:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Languages:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Database:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Tools:</span> [Skills]</div>
+    </div>
+
+    <h2 class="section-title">Education</h2>
+    <div class="item-container">
+        <div class="two-column">
+            <div class="left"><span class="bold">[Institution]</span><br><span class="italic">[Degree]</span></div>
+            <div class="right">[Location]<br>[Year]</div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Experience</h2>
+    <div class="item-container">
+        <div class="two-column">
+            <div class="left"><span class="bold">[Company]</span><br><span class="italic">[Role]</span></div>
+            <div class="right">[Dates]</div>
+        </div>
+        <ul>
+            <li><span class="bold">Action verb</span> descriptive result.</li>
+        </ul>
+    </div>
+
+    <h2 class="section-title">Projects</h2>
+    <div class="item-container">
+        <div class="two-column">
+            <div class="left"><span class="bold">[Project Name]</span></div>
+            <div class="right italic">[Tech Stack]</div>
+        </div>
+        <ul>
+            <li><span class="bold">Action verb</span> descriptive result focusing on impact.</li>
+        </ul>
+    </div>
+
+    <h2 class="section-title">Achievements</h2>
+    <ul>
+        <li><span class="bold">[Achievement Title]:</span> [Detail]</li>
+    </ul>
+</body>
+</html>
+
+Return ONLY raw JSON matching schema schema { "html": "<full html here>" } Without markdown blocks.`;
 
     try {
         const response = await groq.chat.completions.create({
@@ -319,14 +433,14 @@ ${JSON.stringify(zodToJsonSchema(resumePdfSchema))}
             messages: [
                 {
                     role: "system",
-                    content: "You are a professional resume writer. Always return valid JSON with properly escaped strings. Never include control characters or unescaped quotes. Generate clean, modern HTML resumes."
+                    content: "You are an elite, highly precise resume formatter. You MUST strictly obey the specified CSS layout, do NOT change colors or border styles, use exactly the HTML structures shown. Fit everything into concise, dense text to keep it at 1 page. ALWAYS return valid JSON."
                 },
                 {
                     role: "user",
                     content: prompt
                 }
             ],
-            temperature: 0.7,
+            temperature: 0.3,
             max_tokens: 4096
         })
 
@@ -342,300 +456,95 @@ ${JSON.stringify(zodToJsonSchema(resumePdfSchema))}
             jsonContent = JSON.parse(cleaned)
         } catch (parseError) {
             console.error("JSON Parse Error:", parseError)
+            // Just use the explicit CSS fallback we gave it!
             jsonContent = {
                 html: `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Adarsh Kumar - Resume</title>
+    <title>Resume</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', 'Helvetica', sans-serif;
-            line-height: 1.5;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px;
-            background: #fff;
-        }
-
-        h1 {
-            font-size: 32px;
-            color: #000;
-            margin-bottom: 5px;
-            font-weight: 700;
-        }
-
-        .contact-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 25px;
-            color: #2563eb;
-            font-size: 14px;
-        }
-
-        .contact-info a {
-            color: #2563eb;
-            text-decoration: none;
-        }
-
-        .contact-info a:hover {
-            text-decoration: underline;
-        }
-
-        h2 {
-            font-size: 20px;
-            color: #000;
-            margin: 20px 0 10px 0;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #000;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        h3 {
-            font-size: 16px;
-            font-weight: 600;
-            margin: 15px 0 5px 0;
-            color: #000;
-        }
-
-        .objective-text {
-            font-style: italic;
-            margin-bottom: 10px;
-            text-align: justify;
-        }
-
-        .skills-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 5px;
-            margin-bottom: 15px;
-        }
-
-        .skill-item {
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .skill-category {
-            font-weight: 600;
-        }
-
-        .education-item {
-            margin-bottom: 15px;
-        }
-
-        .education-title {
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .education-details {
-            display: flex;
-            justify-content: space-between;
-            color: #666;
-            font-size: 14px;
-            margin: 5px 0;
-        }
-
-        .experience-item, .project-item {
-            margin-bottom: 20px;
-        }
-
-        .experience-header, .project-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            margin-bottom: 5px;
-        }
-
-        .company-name, .project-name {
-            font-weight: 600;
-            font-size: 16px;
-            color: #2563eb;
-        }
-
-        .date {
-            color: #666;
-            font-size: 14px;
-            font-style: italic;
-        }
-
-        .position {
-            font-weight: 500;
-            font-size: 14px;
-            color: #444;
-            margin-bottom: 8px;
-        }
-
-        .description {
-            font-size: 14px;
-            margin-left: 20px;
-            list-style-type: disc;
-        }
-
-        .description li {
-            margin-bottom: 5px;
-            text-align: justify;
-        }
-
-        .achievement-item {
-            margin-bottom: 8px;
-            font-size: 14px;
-            list-style-type: disc;
-            margin-left: 20px;
-        }
-
-        .project-tech {
-            font-size: 13px;
-            color: #666;
-            margin: 5px 0;
-            font-style: italic;
-        }
-
-        ul {
-            margin-left: 20px;
-            margin-bottom: 10px;
-        }
-
-        li {
-            font-size: 14px;
-            margin-bottom: 3px;
-            text-align: justify;
-        }
-
-        .section-content {
-            margin-top: 10px;
-        }
-
-        .bold {
-            font-weight: 600;
-        }
-
-        .link {
-            color: #2563eb;
-            text-decoration: none;
-        }
-
-        .link:hover {
-            text-decoration: underline;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Times New Roman', Times, serif; line-height: 1.25; color: #000; max-width: 800px; margin: 0 auto; background: #fff; font-size: 11px; padding: 10px; }
+        .header { text-align: center; margin-bottom: 6px; }
+        h1 { font-size: 26px; color: #004d40; margin-bottom: 2px; font-weight: bold; }
+        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; font-size: 11px; margin-bottom: 6px; }
+        .contact-info span { color: #000; font-weight: 600; }
+        h2.section-title { font-size: 13px; color: #004d40; margin: 8px 0 4px 0; padding-bottom: 2px; border-bottom: 1.5px solid #d4af37; font-weight: bold; text-transform: capitalize; }
+        .summary p { text-align: justify; margin-bottom: 6px; }
+        .summary .summary-label { color: #004d40; font-weight: bold; }
+        .skills-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: 4px; column-gap: 20px; margin-bottom: 6px; }
+        .skill-item { font-size: 11px; }
+        .skill-item .bold { font-weight: bold; }
+        .two-column { display: flex; justify-content: space-between; align-items: baseline; }
+        .two-column .left .bold { font-weight: bold; font-size: 12px; }
+        .two-column .left .italic { font-style: italic; font-size: 11px; }
+        .two-column .right { text-align: right; }
+        ul { margin-left: 18px; margin-bottom: 6px; }
+        li { font-size: 11px; margin-bottom: 2px; text-align: justify; }
+        li .bold { font-weight: bold; }
+        .item-container { margin-bottom: 6px; }
     </style>
 </head>
 <body>
-    <h1>Adarsh Kumar</h1>
-
-    <div class="contact-info">
-        <span>Adarsh99733207@gmail.com</span>
-        <span>|</span>
-        <span>linkedin.com/in/adarsh-kumar62041</span>
-        <span>|</span>
-        <span>github.com/Adshkumar</span>
-        <span>|</span>
-        <span>adsingh-portfolio.vercel.app</span>
+    <div class="header">
+        <h1>Adarsh Kumar</h1>
+        <div class="contact-info">
+            <span>✉ adarsh99733207@gmail.com</span> <span>|</span> <span>github.com/Adshkumar</span> <span>|</span> <span>adsingh-portfolio.vercel.app</span>
+        </div>
     </div>
-
-    <h2>OBJECTIVE</h2>
-    <div class="objective-text">
-        "Motivated and enthusiastic web developer with hands-on experience in building web applications using React, Tailwind, JavaScript, Node.js, and MongoDB. Eager to apply my skills in frontend and backend development, contribute to real-world projects, and grow as a full-stack developer in a professional environment."
+    <div class="summary">
+        <p><span class="summary-label">Summary — Full-Stack Developer</span> skilled in the MERN stack, building scalable web applications and real-time systems with a focus on clean architecture and performance.</p>
     </div>
-
-    <h2>TECHNICAL SKILLS</h2>
+    <h2 class="section-title">Technical Skills</h2>
     <div class="skills-grid">
-        <div class="skill-item"><span class="skill-category">Frontend:</span> JavaScript, React, Tailwind CSS, HTML5 & CSS3</div>
-        <div class="skill-item"><span class="skill-category">Backend:</span> Node.js, Express.js, REST API, JWT Authentication</div>
-        <div class="skill-item"><span class="skill-category">Databases:</span> MongoDB (Mongoose)</div>
-        <div class="skill-item"><span class="skill-category">Tools:</span> GitHub, VS Code, Socket.IO</div>
-        <div class="skill-item"><span class="skill-category">Others:</span> Problem Solving, Basic Data Structures & Algorithms (learning in C++)</div>
+        <div class="skill-item"><span class="bold">Frontend:</span> JavaScript, React, HTML5 & CSS3</div>
+        <div class="skill-item"><span class="bold">Database:</span> MongoDB (Mongoose)</div>
+        <div class="skill-item"><span class="bold">Backend:</span> Node.js, Express.js, MongoDB</div>
+        <div class="skill-item"><span class="bold">Tools:</span> GitHub, VS Code, Postman</div>
+        <div class="skill-item"><span class="bold">Languages:</span> C++, JavaScript</div>
+        <div class="skill-item"><span class="bold">Others:</span> Data Structures & Algorithms</div>
+    </div>
+    <h2 class="section-title">Education</h2>
+    <div class="item-container">
+        <div class="two-column"><div class="left"><span class="bold">Chhotu Ram Rural Institute of Technology</span><br><span class="italic">Diploma in Computer Science</span></div><div class="right">New Delhi, Delhi<br>2024 – Present</div></div>
+    </div>
+    <div class="item-container">
+        <div class="two-column"><div class="left"><span class="bold">Kids Camp International School</span><br><span class="italic">Class X (CBSE) — 78%</span></div><div class="right">Muzaffarpur, Bihar<br>2024</div></div>
     </div>
 
-    <h2>EDUCATION</h2>
-    <div class="education-item">
-        <div class="education-title">Chhotu Ram Rural Institute of Technology</div>
-        <div class="education-details">
-            <span>Diploma in Computer Science</span>
-            <span>New Delhi, Delhi</span>
-        </div>
-    </div>
-    <div class="education-item">
-        <div class="education-title">Kids Camp International School</div>
-        <div class="education-details">
-            <span>Class X (CBSE) — 78%</span>
-            <span>2024</span>
-        </div>
-        <div class="education-details">
-            <span>Muzaffarpur, Bihar</span>
-        </div>
-    </div>
-
-    <h2>EXPERIENCE</h2>
-    <div class="experience-item">
-        <div class="experience-header">
-            <span class="company-name">AKM TECHIE (Intern)</span>
-            <span class="date">June 2025 – July 2025</span>
-        </div>
-        <div class="position">Frontend Web Development Intern — DTEST Project (HTML, CSS, JavaScript)</div>
-        <ul class="description">
-            <li>Developed a multi-page responsive website with modern UI components including admin dashboard, client portal, and service page.</li>
-            <li>Created custom CSS styling for all sections ensuring visual consistency and responsive design across devices.</li>
-            <li>Implemented interactive user interfaces for contact forms, service demonstrations, and business statistics display.</li>
+    <h2 class="section-title">Experience</h2>
+    <div class="item-container">
+        <div class="two-column"><div class="left"><span class="bold">AKM TECHIE</span><br><span class="italic">Frontend Web Development Intern</span></div><div class="right">June 2025 – July 2025</div></div>
+        <ul>
+            <li><span class="bold">Developed</span> a multi-page responsive website with modern UI components including admin dashboard, client portal, and service pages</li>
+            <li><span class="bold">Created custom CSS styling</span> ensuring visual consistency and responsive design across all devices</li>
+            <li><span class="bold">Implemented interactive user interfaces</span> for contact forms, service demonstrations, and business statistics display</li>
         </ul>
     </div>
 
-    <h2>PROJECTS</h2>
-
-    <div class="project-item">
-        <div class="project-header">
-            <span class="project-name">Uber-Backend</span>
-            <span class="date">Node.js, Express.js, MongoDB</span>
-        </div>
-        <ul class="description">
-            <li>Developed a comprehensive backend system simulating Uber's core functionality including user authentication, ride booking, and driver management.</li>
-            <li>Secured endpoints using JWT authentication middleware and managed data persistence with MongoDB for efficient storage of user, driver, and ride information.</li>
-            <li>Implemented Socket.IO for real-time communication between drivers and passengers during active rides.</li>
-            <li>Designed MongoDB schemas for efficient data storage.</li>
+    <h2 class="section-title">Projects</h2>
+    <div class="item-container">
+        <div class="two-column"><div class="left"><span class="bold">AI Interview Preparation Platform</span></div><div class="right italic">React.js, Node.js, Express.js, MongoDB, JWT, REST API</div></div>
+        <ul>
+            <li><span class="bold">Engineered a full-stack AI-powered interview preparation platform</span> enabling resume uploads and automated interview report generation from job descriptions</li>
+            <li><span class="bold">Built a modular MVC backend architecture</span> (controllers, routes, models, middleware, services) ensuring scalability and maintainability</li>
+            <li><span class="bold">Integrated JWT authentication with protected routes</span> for secure user sessions and API access</li>
+            <li><span class="bold">Leveraged AI services</span> for resume analysis and intelligent interview report generation</li>
+        </ul>
+    </div>
+    <div class="item-container">
+        <div class="two-column"><div class="left"><span class="bold">Uber-Backend System</span></div><div class="right italic">Node.js, Express.js, MongoDB, Socket.IO, Razorpay</div></div>
+        <ul>
+            <li><span class="bold">Designed and developed a scalable ride-booking backend system</span> with user authentication, ride lifecycle management, and driver assignment</li>
+            <li><span class="bold">Implemented real-time communication using Socket.IO</span> for ride requests, driver notifications, and live status updates</li>
         </ul>
     </div>
 
-    <div class="project-item">
-        <div class="project-header">
-            <span class="project-name">Bloggify</span>
-            <span class="date">Node.js, Express.js, MongoDB, React.js, JWT</span>
-        </div>
-        <ul class="description">
-            <li>Developed a full-stack blog application with user authentication, CRUD operations for blog posts, and responsive UI.</li>
-            <li>Implemented secure user registration/login using JWT authentication and protected routes for personalized blog management.</li>
-            <li>Features include user registration, blog creation, delete personal blog management dashboard.</li>
-        </ul>
-    </div>
-
-    <div class="project-item">
-        <div class="project-header">
-            <span class="project-name">Chat Application</span>
-            <span class="date">Node.js, Express.js, MongoDB, React.js, Socket.IO, JWT Authentication, Tailwind CSS, REST API</span>
-        </div>
-        <ul class="description">
-            <li>Developed a structured MVC-based backend with clear separation of controllers, routes, models, and middleware.</li>
-            <li>Built RESTful APIs for user authentication, chat management, and message handling, ensuring clean data flow between frontend and backend.</li>
-            <li>Implemented JWT-based authentication and authorization, securing protected routes and user sessions, along with token invalidation for secure logout.</li>
-            <li>Designed and structured MongoDB schemas using Mongoose for users, chats, messages, and token management, ensuring efficient data storage and retrieval.</li>
-            <li>Enabled real-time communication using Socket.IO for instant message delivery, typing indicators, and online status updates.</li>
-        </ul>
-    </div>
-
-    <h2>ACHIEVEMENTS</h2>
-    <ul class="achievement-item">
-        <li><span class="bold">LeetCode Badge:</span> Earned problem-solving badge on LeetCode for consistent performance and coding proficiency.</li>
-        <li><span class="bold">Internship Certificate:</span> Successfully completed internship with hands-on project experience.</li>
+    <h2 class="section-title">Achievements</h2>
+    <ul>
+        <li><span class="bold">LeetCode Badge:</span> Earned problem-solving badge for consistent performance and coding proficiency</li>
+        <li><span class="bold">Project Portfolio:</span> Delivered 4+ full-stack projects with real-time features and production-ready code</li>
     </ul>
 </body>
 </html>`

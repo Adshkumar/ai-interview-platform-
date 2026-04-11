@@ -12,7 +12,8 @@ const Register = () => {
 
     const handleRegister = async (userData) => {
         try {
-            const response = await fetch('http://localhost:4000/api/auth/register', {
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: username, email, password }),
@@ -43,13 +44,23 @@ const Register = () => {
     };
 
     if (loading) {
-        return <main><h1>Loading.......</h1></main>;
+        return (
+            <main className="auth-main">
+                <div className="loader">
+                    <div className="spinner"></div>
+                    <h2>Creating Account...</h2>
+                </div>
+            </main>
+        )
     }
 
     return (
-        <main>
+        <main className="auth-main">
             <div className="form-container">
-                <h1>Register</h1>
+                <div className="header-text">
+                    <h1>Create Account</h1>
+                    <p>Join us and start your journey today</p>
+                </div>
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
                         <label htmlFor="username">Username</label>
@@ -64,14 +75,14 @@ const Register = () => {
                         />
                     </div>
                     <div className="input-group">
-                        <label htmlFor="email">Email</label>
+                        <label htmlFor="email">Email Address</label>
                         <input
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             type="email"
                             id="email"
                             name="email"
-                            placeholder="Enter email address"
+                            placeholder="name@example.com"
                             required
                         />
                     </div>
@@ -83,17 +94,19 @@ const Register = () => {
                             type="password"
                             id="password"
                             name="password"
-                            placeholder="Enter password"
+                            placeholder="••••••••"
                             required
                         />
                     </div>
-                    <button className="button primary-button" type="submit" disabled={loading}>
-                        Register
+                    <button className="primary-button" type="submit" disabled={loading}>
+                        Create Account
                     </button>
                 </form>
-                <p>
-                    Already have an account? <Link to="/login">Login</Link>
-                </p>
+                <div className="register-footer">
+                    <p>
+                        Already have an account? <Link to="/login">Sign in</Link>
+                    </p>
+                </div>
             </div>
         </main>
     );
