@@ -84,19 +84,22 @@ export const useInterview = () => {
     }
     // Download Resume PDF
     const getResumePdf = async (interviewReportId) => {
-
         if (!interviewReportId) return
-
         setLoading(true)
 
         try {
-
             const response = await generateResumePdf({ interviewReportId })
 
+            if (response.type === 'application/json') {
+                const text = await response.text();
+                const errorData = JSON.parse(text);
+                console.error("PDF generation failed:", errorData);
+                alert(`Error: ${errorData.message || 'Failed to generate PDF'}`);
+                return;
+            }
+
             const blob = new Blob([response], { type: 'application/pdf' })
-
             const url = window.URL.createObjectURL(blob)
-
             const link = document.createElement('a')
             link.href = url
             link.download = `resume_${interviewReportId}.pdf`
@@ -109,7 +112,8 @@ export const useInterview = () => {
             }, 100)
 
         } catch (error) {
-            console.log("PDF download error:", error)
+            console.error("PDF download error:", error)
+            alert("Unexpected error downloading PDF. Please check server logs.");
         } finally {
             setLoading(false)
         }
