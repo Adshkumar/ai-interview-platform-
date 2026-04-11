@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import "../../style/button.scss"
+import "../auth.form.scss";
 
 const Register = () => {
     const navigate = useNavigate();
@@ -9,35 +8,28 @@ const Register = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const handleRegister = async (userData) => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
         try {
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ name: username, email, password }),
             });
-            if (!response.ok) {
-                throw new Error('Registration failed');
-            }
             const data = await response.json();
-            console.log('Success:', data);
-            return data;
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await handleRegister({ username, email, password });
+            if (!response.ok) {
+                setError(data.message || 'Registration failed. Please try again.');
+                return;
+            }
             navigate("/");
-        } catch (error) {
-            alert('Registration error: ' + error.message);
+        } catch (err) {
+            setError('Unable to connect to server. Please try again in a moment.');
         } finally {
             setLoading(false);
         }
@@ -51,7 +43,7 @@ const Register = () => {
                     <h2>Creating Account...</h2>
                 </div>
             </main>
-        )
+        );
     }
 
     return (
@@ -62,6 +54,7 @@ const Register = () => {
                     <p>Join us and start your journey today</p>
                 </div>
                 <form onSubmit={handleSubmit}>
+                    {error && <div className="error-message">{error}</div>}
                     <div className="input-group">
                         <label htmlFor="username">Username</label>
                         <input
@@ -112,4 +105,4 @@ const Register = () => {
     );
 };
 
-export default Register;
+export default Register;
