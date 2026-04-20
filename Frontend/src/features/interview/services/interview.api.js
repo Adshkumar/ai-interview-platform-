@@ -65,6 +65,16 @@ export const getAllInterviewReports = async () => {
     }
 };
 
+export const deleteInterviewReport = async (interviewId) => {
+    try {
+        const response = await api.post(`/api/interview/delete-report/${interviewId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Delete Report Error:", error);
+        throw error;
+    }
+};
+
 
 export const generateResumePdf = async ({ interviewReportId }) => {
 

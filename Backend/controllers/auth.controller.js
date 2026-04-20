@@ -39,8 +39,8 @@ async function registerUserController(req, res) {
 
         res.cookie("token", token, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -90,8 +90,8 @@ async function loginUserController(req, res) {
 
         res.cookie("token", token, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -130,41 +130,9 @@ async function logoutUserController(req, res) {
     }
 }
 
-// async function getMeController(req, res) {
-//     try {
-//         const user = await usermodel.findById(req.user.id);
-
-//         if (!user) {
-//             return res.status(404).json({
-//                 message: "User not found"
-//             });
-//         }
-
-//         res.status(200).json({
-//             message: "User found successfully",
-//             user: {
-//                 id: user._id,
-//                 name: user.name,
-//                 email: user.email,
-//             }
-//         });
-//     } catch (error) {
-//         console.error("GetMe error:", error);
-//         res.status(500).json({
-//             message: "Error fetching user",
-//             error: error.message
-//         });
-//     }
-// }
 async function getMeController(req, res) {
     try {
-        // console.log('===== GET ME DEBUG =====');
-        // console.log('req.user:', req.user);
-        // console.log('req.user.id:', req.user?.id);
-        // console.log('Cookies:', req.cookies);
-
         const user = await usermodel.findById(req.user.id);
-        // console.log('Found user:', user ? 'Yes' : 'No');
 
         if (!user) {
             return res.status(404).json({
@@ -181,7 +149,6 @@ async function getMeController(req, res) {
             }
         });
     } catch (error) {
-        // console.error("GetMe error:", error);
         res.status(500).json({
             message: "Error fetching user",
             error: error.message

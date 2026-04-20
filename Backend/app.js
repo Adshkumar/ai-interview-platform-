@@ -10,7 +10,6 @@ const interviewRouter = require('./routes/interview.routes');
 
 var app = express();
 
-// Support multiple comma-separated FRONTEND URLs via env var
 const envOrigins = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
     : [];
@@ -24,9 +23,7 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (Postman, curl, mobile apps, Render health checks)
         if (!origin) return callback(null, true);
-        // Allow any vercel.app preview/deployment URL for this project
         if (origin.endsWith('.vercel.app')) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
         console.warn('CORS blocked origin:', origin);
@@ -37,7 +34,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(logger('dev'));
+app.use(logger(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -50,5 +47,14 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("GLOBAL ERROR:", err.stack);
+    res.status(500).json({
+        message: "An internal server error occurred",
+        error: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
 
 module.exports = app;

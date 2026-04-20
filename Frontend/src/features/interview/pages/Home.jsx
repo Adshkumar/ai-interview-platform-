@@ -2,15 +2,20 @@ import React, { useState, useRef } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
+import { useEffect } from 'react'
 
 const Home = () => {
 
-    const { loading, generateReport, reports } = useInterview()
+    const { loading, generateReport, reports, getReports, deleteReport } = useInterview()
     const [jobDescription, setJobDescription] = useState("")
     const [selfDescription, setSelfDescription] = useState("")
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
+
+    useEffect(() => {
+        getReports()
+    }, [])
 
     const handleGenerateReport = async () => {
         const resumeFile = resumeInputRef.current.files[0]
@@ -21,6 +26,7 @@ const Home = () => {
     if (loading) {
         return (
             <main className='loading-screen'>
+                <div className="loader"></div>
                 <h1>Loading your interview plan...</h1>
             </main>
         )
@@ -28,6 +34,20 @@ const Home = () => {
 
     return (
         <div className='home-page'>
+            {/* Mobile Top Bar */}
+            <header className="interview-mobile-header">
+                <div style={{ width: '40px' }}></div> {/* Spacer for left balance */}
+
+                <div 
+                    className="mobile-logo" 
+                    onClick={() => navigate('/')} 
+                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                >
+                    Interview<span className="accent">AI</span>
+                </div>
+
+                <div style={{ width: '40px' }}></div> {/* Spacer for right balance */}
+            </header>
 
             {/* Page Header */}
             <header className='page-header'>
@@ -129,10 +149,35 @@ const Home = () => {
                     <ul className='reports-list'>
                         {reports.map(report => (
                             <li key={report._id} className='report-item' onClick={() => navigate(`/interview/${report._id}`)}>
-                                <h3>{report.title || 'Untitled Position'}</h3>
-                                <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
-                                <p className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>Match Score: {report.matchScore}%</p>
-                            </li>
+                                <div className="report-item__header">
+                                    <h3>{report.title || 'Untitled Position'}</h3>
+                                    <button 
+                                        className="delete-btn"
+                                        title="Delete this interview report"
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if(window.confirm('Are you sure you want to delete this interview plan? This action cannot be undone.')) {
+                                                const res = await deleteReport(report._id);
+                                                if (!res?.success) {
+                                                    const errorMsg = res?.error?.response?.data?.message || res?.error?.message || "Unknown error";
+                                                    alert(`Failed to delete report: ${errorMsg}`);
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
+                                 <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
+                                 <div className="report-item__footer">
+                                    <p className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 65 ? 'score--mid' : 'score--low'}`}>
+                                        Match Score: {report.matchScore}%
+                                    </p>
+                                    {report.weaknessAnalysis?.some(w => w.priority === 'high') && (
+                                        <span className="gap-alert-badge">Critical Gaps found</span>
+                                    )}
+                                 </div>
+                             </li>
                         ))}
                     </ul>
                 </section>

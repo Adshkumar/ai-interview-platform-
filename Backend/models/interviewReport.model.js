@@ -83,6 +83,29 @@ const interviewReportSchema = new mongoose.Schema({
     behavioralQuestions: [behavioralQuestionSchema],
     skillGaps: [skillGapSchema],
     preparationPlan: [preparationPlanSchema],
+    interviewTips: [String],
+    cheatSheet: [{
+        topic: String,
+        content: String
+    }],
+    dsaAnalysis: [{
+        pattern: String,
+        description: String,
+        questions: [{
+            title: String,
+            difficulty: String,
+            link: String,
+            keyConcept: String
+        }]
+    }],
+    weaknessAnalysis: [{
+        weakness: String,
+        improvement: String,
+        priority: {
+            type: String,
+            enum: ["low", "medium", "high"],
+        }
+    }],
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"

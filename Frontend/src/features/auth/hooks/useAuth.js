@@ -19,7 +19,6 @@ export const useAuth = () => {
                 return { success: true }
             }
         } catch (err) {
-            console.error('Login error:', err)
             return { success: false, error: err.response?.data?.message || 'Login failed' }
         } finally {
             setLoading(false)
@@ -35,7 +34,6 @@ export const useAuth = () => {
                 return { success: true }
             }
         } catch (err) {
-            console.error('Register error:', err)
             return { success: false, error: err.response?.data?.message || 'Registration failed' }
         } finally {
             setLoading(false)
@@ -49,7 +47,6 @@ export const useAuth = () => {
             setUser(null)
             return { success: true }
         } catch (err) {
-            console.error('Logout error:', err)
             return { success: false, error: 'Logout failed' }
         } finally {
             setLoading(false)
@@ -67,7 +64,6 @@ export const useAuth = () => {
                     setUser(null)
                 }
             } catch (err) {
-                console.error('GetMe error:', err)
                 setUser(null)
             } finally {
                 setLoading(false)

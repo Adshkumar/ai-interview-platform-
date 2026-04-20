@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome && node server.js",
+    "start": "node server.js",
     "dev": "nodemon server.js",
-    "postinstall": "PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome"
+    "postinstall": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

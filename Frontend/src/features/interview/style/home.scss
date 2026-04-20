@@ -19,7 +19,9 @@ $font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
 .home-page {
     width: 100%;
     min-height: 100vh;
-    background-color: $bg-page;
+    background: radial-gradient(circle at top left, rgba($accent, 0.07), transparent 40%),
+                radial-gradient(circle at bottom right, rgba($accent, 0.05), transparent 40%),
+                $bg-page;
     color: $text-primary;
     font-family: $font-stack;
 
@@ -27,8 +29,8 @@ $font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 3rem 1.5rem;
-    gap: 2rem;
+    padding: 4rem 1.5rem;
+    gap: 3rem;
 }
 
 // ── Page Header ──────────────────────────────────────────────────────────────
@@ -58,11 +60,30 @@ $font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
 // ── Main Card ────────────────────────
 .interview-card {
     width: 100%;
-    max-width: 900px;
-    background-color: $bg-card;
-    border: 1px solid $border-color;
-    border-radius: 1rem;
+    max-width: 950px;
+    background: rgba($bg-card, 0.6);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba($border-color, 0.5);
+    border-radius: 1.5rem;
     overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 100px rgba($accent, 0.02);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        pointer-events: none;
+        border-radius: 1.5rem;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    &:hover {
+        border-color: rgba($accent, 0.4);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 120px rgba($accent, 0.05);
+        transform: translateY(-4px);
+    }
 
     &__body {
         display: flex;
@@ -333,27 +354,117 @@ $font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         gap: 0.75rem;
         flex-wrap: wrap;
 
-        .report-item {
-            background-color: $bg-card;
-            border: 1px solid $border-color;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            cursor: pointer;
-            flex-shrink: 0;
+            .report-item {
+                background-color: $bg-card;
+                border: 1px solid $border-color;
+                border-radius: 0.75rem;
+                padding: 1.25rem;
+                flex: 1;
+                min-width: 250px;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                cursor: pointer;
+                transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
-            .match-score {
-                font-size: 0.8rem;
-                font-weight: 600;
-                color: $accent;
-                align-items: flex-start;
+                &:hover {
+                    transform: translateY(-4px);
+                    border-color: $accent;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+
+                    .delete-btn {
+                        opacity: 1;
+                    }
+                }
+
+                &__header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                }
+
+                .delete-btn {
+                    background: rgba(#f44336, 0.08);
+                    border: 1px solid rgba(#f44336, 0.15);
+                    color: rgba(#f44336, 0.7);
+                    padding: 0.5rem;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                    opacity: 0.4;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10;
+
+                    &:hover {
+                        opacity: 1;
+                        background: #f44336;
+                        color: white;
+                        border-color: #f44336;
+                        transform: scale(1.1);
+                        box-shadow: 0 4px 12px rgba(#f44336, 0.3);
+                    }
+                }
+
+                h3 {
+                    font-size: 1.05rem;
+                    color: $text-primary;
+                    margin: 0;
+                }
+
+                .report-meta {
+                    font-size: 0.8rem;
+                    color: $text-muted;
+                }
+
+                .report-item__footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 0.5rem;
+                }
+
+                .match-score {
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    padding: 0.2rem 0.6rem;
+                    border-radius: 2rem;
+                    margin: 0;
+
+                    &.score--high {
+                        color: #3fb950;
+                        background: rgba(#3fb950, 0.1);
+                        border: 1px solid rgba(#3fb950, 0.2);
+                    }
+                    &.score--mid {
+                        color: #f5a623;
+                        background: rgba(#f5a623, 0.1);
+                        border: 1px solid rgba(#f5a623, 0.2);
+                    }
+                    &.score--low {
+                        color: #ff4d4d;
+                        background: rgba(#ff4d4d, 0.1);
+                        border: 1px solid rgba(#ff4d4d, 0.2);
+                    }
+                }
+
+                .gap-alert-badge {
+                    font-size: 0.65rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    color: #ff4d4d;
+                    background: rgba(#ff4d4d, 0.1);
+                    padding: 0.2rem 0.6rem;
+                    border-radius: 2rem;
+                    border: 1px solid rgba(#ff4d4d, 0.2);
+                    letter-spacing: 0.05em;
+                    box-shadow: 0 0 10px rgba(#ff4d4d, 0.1);
+                }
             }
         }
     }
-}
 
 
 // ── Page Footer ───────────────────────────────────────────────────────────────
@@ -386,6 +497,56 @@ $font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         font-size: 0.9rem;
         padding: 10px;
     }
+}
+
+/* ================= PREMIUM LOADING SCREEN ================= */
+.loading-screen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at center, #1c2230 0%, #0d1117 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    color: white;
+    z-index: 9999;
+
+    .loader {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 4px solid rgba($accent, 0.1);
+        border-top-color: $accent;
+        animation: spin 1s infinite cubic-bezier(0.5, 0, 0.5, 1),
+                   loader-glow 2s infinite ease-in-out;
+    }
+
+    h1 {
+        font-size: 1.1rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        animation: pulse-text 2s infinite ease-in-out;
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes loader-glow {
+    0%, 100% { box-shadow: 0 0 15px rgba($accent, 0.2); }
+    50% { box-shadow: 0 0 35px rgba($accent, 0.6); }
+}
+
+@keyframes pulse-text {
+    0%, 100% { opacity: 0.4; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-3px); }
 }
 
 

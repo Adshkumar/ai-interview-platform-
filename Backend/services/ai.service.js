@@ -3,8 +3,7 @@ const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 const puppeteer = require("puppeteer");
 
-// Lazy Groq client — only initializes when first AI call is made
-// Prevents server crash at startup if GROQ_API_KEY env var is missing
+
 let _groq = null;
 function getGroqClient() {
     if (!_groq) {
@@ -22,236 +21,280 @@ function parseAIJson(text) {
 }
 
 const interviewReportSchema = z.object({
-    matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
+    matchScore: z.number(),
     technicalQuestions: z.array(z.object({
-        question: z.string().describe("The technical question can be asked in the interview"),
-        intention: z.string().describe("The intention of interviewer behind asking this question"),
-        answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
-    })).describe("Technical questions that can be asked in the interview along with their intention and how to answer them"),
+        question: z.string(),
+        intention: z.string(),
+        answer: z.string()
+    })),
     behavioralQuestions: z.array(z.object({
-        question: z.string().describe("The technical question can be asked in the interview"),
-        intention: z.string().describe("The intention of interviewer behind asking this question"),
-        answer: z.string().describe("How to answer this question, what points to cover, what approach to take etc.")
-    })).describe("Behavioral questions that can be asked in the interview along with their intention and how to answer them"),
+        question: z.string(),
+        intention: z.string(),
+        answer: z.string()
+    })),
     skillGaps: z.array(z.object({
-        skill: z.string().describe("The skill which the candidate is lacking"),
-        severity: z.enum(["low", "medium", "high"]).describe("The severity of this skill gap, i.e. how important is this skill for the job and how much it can impact the candidate's chances")
-    })).describe("List of skill gaps in the candidate's profile along with their severity"),
+        skill: z.string(),
+        severity: z.enum(["low", "medium", "high"])
+    })),
     preparationPlan: z.array(z.object({
-        day: z.number().describe("The day number in the preparation plan, starting from 1"),
-        focus: z.string().describe("The main focus of this day in the preparation plan, e.g. data structures, system design, mock interviews etc."),
-        tasks: z.array(z.string()).describe("List of tasks to be done on this day to follow the preparation plan, e.g. read a specific book or article, solve a set of problems, watch a video etc.")
-    })).describe("A day-wise preparation plan for the candidate to follow in order to prepare for the interview effectively"),
-    title: z.string().describe("The title of the job for which the interview report is generated"),
+        day: z.number(),
+        focus: z.string(),
+        tasks: z.array(z.string())
+    })),
+    interviewTips: z.array(z.string()),
+    cheatSheet: z.array(z.object({
+        topic: z.string(),
+        content: z.string()
+    })),
+    jobDescriptionAnalysis: z.object({
+        techStack: z.array(z.string()),
+        coreResponsibilities: z.array(z.string()),
+        keyQualifications: z.array(z.string())
+    }),
+    weaknessAnalysis: z.array(z.object({
+        weakness: z.string(),
+        improvement: z.string(),
+        priority: z.enum(["low", "medium", "high"])
+    })),
+    title: z.string(),
 })
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
+    const jsonExample = {
+        matchScore: 85,
+        title: "Senior Software Engineer",
+        technicalQuestions: [
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." }
+        ],
+        behavioralQuestions: [
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." },
+            { question: "...", intention: "...", answer: "..." }
+        ],
+        skillGaps: [{ skill: "...", severity: "high" }],
+        preparationPlan: [
+            { day: 1, focus: "...", tasks: ["...", "..."] },
+            { day: 2, focus: "...", tasks: ["...", "..."] },
+            { day: 3, focus: "...", tasks: ["...", "..."] },
+            { day: 4, focus: "...", tasks: ["...", "..."] },
+            { day: 5, focus: "...", tasks: ["...", "..."] },
+            { day: 6, focus: "...", tasks: ["...", "..."] },
+            { day: 7, focus: "...", tasks: ["...", "..."] },
+            { day: 8, focus: "...", tasks: ["...", "..."] },
+            { day: 9, focus: "...", tasks: ["...", "..."] },
+            { day: 10, focus: "...", tasks: ["...", "..."] },
+            { day: 11, focus: "...", tasks: ["...", "..."] },
+            { day: 12, focus: "...", tasks: ["...", "..."] },
+            { day: 13, focus: "...", tasks: ["...", "..."] },
+            { day: 14, focus: "...", tasks: ["...", "..."] }
+        ],
+        interviewTips: ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5", "Tip 6", "Tip 7", "Tip 8"],
+        skillGaps: [
+            { skill: "Skill 1", severity: "high" },
+            { skill: "Skill 2", severity: "medium" },
+            { skill: "Skill 3", severity: "high" },
+            { skill: "Skill 4", severity: "low" }
+        ],
+        weaknessAnalysis: [
+            { weakness: "Gap 1", improvement: "...", priority: "high" },
+            { weakness: "Gap 2", improvement: "...", priority: "medium" },
+            { weakness: "Gap 3", improvement: "...", priority: "high" },
+            { weakness: "Gap 4", improvement: "...", priority: "medium" },
+            { weakness: "Gap 5", improvement: "...", priority: "low" },
+            { weakness: "Gap 6", improvement: "...", priority: "medium" }
+        ],
+        cheatSheet: [
+            { topic: "Topic 1", content: "..." },
+            { topic: "Topic 2", content: "..." },
+            { topic: "Topic 3", content: "..." },
+            { topic: "Topic 4", content: "..." },
+            { topic: "Topic 5", content: "..." },
+            { topic: "Topic 6", content: "..." }
+        ],
+        dsaAnalysis: [
+            {
+                pattern: "Pattern 1",
+                description: "...",
+                questions: [
+                    { title: "Q1", difficulty: "...", link: "...", keyConcept: "..." },
+                    { title: "Q2", difficulty: "...", link: "...", keyConcept: "..." },
+                    { title: "Q3", difficulty: "...", link: "...", keyConcept: "..." },
+                    { title: "Q4", difficulty: "...", link: "...", keyConcept: "..." }
+                ]
+            }
+        ]
+    };
 
-    const prompt = `Generate a comprehensive interview report for a candidate with the following details:
+    const prompt = `Generate a HIGH-INTENSITY MNC Interview Blueprint for:
 
-Resume: ${resume}
-Self Description: ${selfDescription}
-Job Description: ${jobDescription}
+CONTEXT:
+Resume: ${resume || "Not provided"}
+Job Description/Title: ${jobDescription || "General Software Role"}
+Self Description: ${selfDescription || "Not provided"}
 
-IMPORTANT INSTRUCTIONS:
-1. You MUST generate 5-7 technical questions with COMPLETE answers
-2. You MUST generate 4-6 behavioral questions with COMPLETE answers
-3. Every question MUST have ALL three fields: question, intention, and answer
-4. The "answer" field must be detailed and helpful (at least 3-4 sentences)
-5. Do not leave any field empty or missing
+STRICT QUANTITY & CONTENT REQUIREMENTS:
+1. TECHNICAL QUESTIONS: Exactly 8 specialized questions. For each question, the 'intention' and 'answer' MUST be comprehensive (at least 4-5 detailed lines each).
+2. BEHAVIORAL QUESTIONS: Exactly 8 STAR-method based questions. For each question, the 'intention' and 'answer' MUST be comprehensive (at least 4-5 detailed lines each).
+3. PREPARATION PLAN: A full 14-DAY study roadmap.
+4. EXPERT TIPS: At least 8-10 high-stakes interview strategy tips.
+5. SKILL GAPS: Generate 8-10 specific technology or methodology keywords that are missing from the resume but required by the JD.
+6. CRITICAL GAP ANALYSIS: Exactly 5-6 high-impact vulnerabilities. Compare the Resume against the Job Description specifically to find what is MISSING. For each gap, provide a detailed 'improvement' strategy.
+7. TECHNICAL MASTERY (CHEAT SHEET): A list of 8-10 core technical topics the candidate MUST master specifically for this role based on their resume gaps.
+8. DSA MASTERY SECTION (CRITICAL): Generate 8-10 algorithmic PATTERNS (e.g., Sliding Window, Two Pointers, BFS/DFS, DP, Graphs, Greedy, LINKED LIST, HEAP, BINARY SEARCH).
+   - For each pattern, provide 5-7 most frequent questions asked in MNCs (Google, Meta, Amazon).
+   - Include difficulty, a brief concept hint, and a placeholder LeetCode link.
 
-For technicalQuestions:
-- Generate questions based on the job requirements and candidate's resume
-- Each question should test specific technical skills
-- Provide detailed intention and COMPLETE model answer
+OUTPUT RULES:
+1. Return ONLY a JSON object.
+2. Follow this structure EXACTLY (ensure intention and answer are long-form):
+${JSON.stringify(jsonExample, null, 2)}
 
-For behavioralQuestions:
-- Generate questions using the STAR method
-- Questions should assess soft skills, teamwork, leadership
-- Provide detailed intention and COMPLETE model answer
-
-For skillGaps:
-- Identify 3-5 skills the candidate is missing or needs to improve
-- Rate each gap's severity (low/medium/high)
-- Format each skill gap as an object with "skill" and "severity" fields
-
-For preparationPlan:
-- Create a 7-14 day preparation plan
-- Each day should have a clear focus and 2-4 specific tasks
-
-Return ONLY raw JSON. Do not wrap it in markdown.
-
-Use this schema:
-${JSON.stringify(zodToJsonSchema(interviewReportSchema))}
-`
+NO PREAMBLE. NO MARKDOWN. ONLY JSON.`;
 
     const response = await getGroqClient().chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
             {
                 role: "system",
-                content: "You are an expert interview coach. You MUST generate COMPLETE data with ALL fields. Every question MUST have a detailed answer field. Never leave any field empty. For skillGaps, always include both 'skill' and 'severity' fields for each item."
+                content: "You are an elite Tech Interview Coach. You output strict JSON based on Resume/JD analysis."
             },
             {
                 role: "user",
                 content: prompt
             }
         ],
-        temperature: 0.7,
+        response_format: { type: "json_object" },
+        temperature: 0.3,
         max_tokens: 4096
-    })
+    });
 
-    const text = response.choices[0].message.content
-    let data = parseAIJson(text)
+    const text = response.choices[0].message.content;
+    let data = parseAIJson(text);
 
-    if (!data.title || data.title.trim() === "") {
-        data.title = "Generated Interview Report"
-    }
 
-    if (typeof data.matchScore !== 'number' || isNaN(data.matchScore)) {
-        const hasTechnical = data.technicalQuestions?.length || 0
-        const hasBehavioral = data.behavioralQuestions?.length || 0
-        const hasSkillGaps = data.skillGaps?.length || 0
-
-        data.matchScore = Math.min(95, Math.max(70, 70 + (hasTechnical * 2) + (hasBehavioral * 2) + (hasSkillGaps * 1)))
-    }
-
-    data.matchScore = Math.min(100, Math.max(0, data.matchScore))
-    if (data.technicalQuestions && Array.isArray(data.technicalQuestions)) {
-        data.technicalQuestions = data.technicalQuestions.map((q, index) => ({
-            question: q.question || `Technical Question ${index + 1}`,
-            intention: q.intention || "To assess technical knowledge and problem-solving skills",
-            answer: q.answer || "This question tests your understanding of core concepts. Make sure to explain your thought process clearly and provide examples from your experience."
-        }))
-    } else {
-        data.technicalQuestions = [
-            {
-                question: "Explain the difference between REST and GraphQL",
-                intention: "To assess understanding of API architectures",
-                answer: "REST is an architectural style with multiple endpoints for different resources. GraphQL is a query language with a single endpoint that allows clients to request specific data. REST is simpler and uses HTTP methods, while GraphQL provides more flexibility and reduces over-fetching. Choose REST for simple CRUD operations and GraphQL for complex data requirements."
-            },
-            {
-                question: "How do you handle state management in React?",
-                intention: "To evaluate frontend architecture knowledge",
-                answer: "For local component state, I use useState. For shared state between components, I use Context API. For complex applications with global state, I use Redux or Zustand. I also use React Query for server state management. The choice depends on the application complexity and requirements."
-            }
-        ]
-    }
-
-    if (data.behavioralQuestions && Array.isArray(data.behavioralQuestions)) {
-        data.behavioralQuestions = data.behavioralQuestions.map((q, index) => ({
-            question: q.question || `Behavioral Question ${index + 1}`,
-            intention: q.intention || "To assess soft skills and past experiences",
-            answer: q.answer || "Use the STAR method: Situation, Task, Action, Result. Describe the context, your role, the actions you took, and the positive outcome. Focus on your contributions and what you learned."
-        }))
-    } else {
-        data.behavioralQuestions = [
-            {
-                question: "Tell me about a time you had to deal with a difficult team member",
-                intention: "To assess conflict resolution skills",
-                answer: "Use STAR method. Situation: A team member disagreed with my approach. Task: Needed to complete the project on time. Action: I scheduled a one-on-one meeting, listened to their concerns, and found a compromise. Result: We delivered the project successfully and improved our working relationship."
-            },
-            {
-                question: "Describe a project you're most proud of",
-                intention: "To understand work quality and passion",
-                answer: "Choose a relevant project. Explain the challenges, your role, the technologies used, and the impact. Focus on what you learned and how it demonstrates your skills. Quantify results where possible."
-            }
-        ]
-    }
-
-    if (data.skillGaps && Array.isArray(data.skillGaps)) {
-        data.skillGaps = data.skillGaps.map(gap => {
-            if (typeof gap === 'string') {
-                return {
-                    skill: gap,
-                    severity: "medium"
-                };
-            }
-            if (!gap.skill) {
-                const skillName = gap.name || gap.title || gap.skillName || gap.skill_name;
-                if (skillName) {
-                    return {
-                        skill: skillName,
-                        severity: gap.severity || "medium"
-                    };
-                }
-                return {
-                    skill: "Unknown Skill",
-                    severity: gap.severity || "medium"
-                };
-            }
-            const validSeverity = gap.severity && ["low", "medium", "high"].includes(gap.severity)
-                ? gap.severity
-                : "medium";
-
-            return {
-                skill: gap.skill,
-                severity: validSeverity
-            };
-        }).filter(gap => gap.skill && gap.skill.trim() !== "");
-    }
+    if (!data.title) data.title = jobDescription || "Interview Preparation Plan";
 
     if (!data.skillGaps || !Array.isArray(data.skillGaps) || data.skillGaps.length === 0) {
         data.skillGaps = [
-            { skill: "System Design", severity: "high" },
-            { skill: "Database Optimization", severity: "medium" },
-            { skill: "Testing Practices", severity: "low" }
-        ]
+            { skill: "Cloud Native Architecture", severity: "high" },
+            { skill: "Distributed Systems", severity: "high" },
+            { skill: "High-Scale Traffic Handling", severity: "medium" },
+            { skill: "Advanced Security Protocols", severity: "medium" },
+            { skill: "CI/CD Pipeline Mastery", severity: "low" }
+        ];
     }
 
-    if (!data.preparationPlan || !Array.isArray(data.preparationPlan) || data.preparationPlan.length === 0) {
-        data.preparationPlan = [
+    if (!data.technicalQuestions || !Array.isArray(data.technicalQuestions) || data.technicalQuestions.length === 0) {
+        data.technicalQuestions = [
             {
-                day: 1,
-                focus: "Data Structures Review",
-                tasks: [
-                    "Review arrays, linked lists, and trees",
-                    "Solve 5 medium LeetCode problems",
-                    "Practice explaining solutions out loud"
+                question: "Explain your process for architectural decision making in a multi-tenant environment.",
+                intention: "This question seeks to evaluate your ability to think cross-functionally and understand long-term impacts of system design. It assesses your proficiency in data isolation, security modeling, and resource management across different user tiers. The interviewer is looking for a structured approach that balances scalability with complexity and cost-efficiency.",
+                answer: "I start by rigorously gathering multi-dimensional requirements, focusing on isolation patterns and scalability limits. I evaluate trade-offs between shared and siloed architectures, considering factors like regulatory compliance and operational overhead for each tenant. My process involves creating a high-fidelity proof-of-concept to validate the chosen isolation strategy before committing to full-scale development. Finally, I present the architectural blueprint to cross-functional stakeholders, incorporating feedback on security, performance, and maintenance."
+            },
+            {
+                question: "How would you optimize a large-scale React application suffering from frequent re-renders?",
+                intention: "The objective is to test your deep understanding of the React reconciliation process and your ability to diagnose performance bottlenecks using profiling tools. The interviewer wants to see if you can distinguish between state-driven updates and unnecessary component cycles. It also evaluates your knowledge of advanced patterns like memoization and context-splitting.",
+                answer: "I begin by using the React Profiler to identify exactly which components are re-rendering and the specific props triggering those updates. Once the bottlenecks are located, I implement strategic memoization using React.memo and useMemo for heavy computations or reference-based props. I also look for 'State Lifting' issues and consider moving state closer to where it is used or splitting large contexts into smaller, targeted pieces. For list-heavy applications, I implement virtualization techniques to ensure only visible items are rendered, drastically reducing the DOM burden."
+            }
+        ];
+    }
+
+    if (!data.dsaAnalysis || !Array.isArray(data.dsaAnalysis) || data.dsaAnalysis.length === 0) {
+        data.dsaAnalysis = [
+            {
+                pattern: "Sliding Window",
+                description: "Optimizes problems involving arrays or substrings by maintaining a window that slides over the collection.",
+                questions: [
+                    { title: "Maximum Sum Subarray of size K", difficulty: "Easy", link: "leetcode.com", keyConcept: "Fixed-size window" },
+                    { title: "Longest Substring with K Distinct Characters", difficulty: "Medium", link: "leetcode.com", keyConcept: "Variable-size window with Hash Map" }
                 ]
             },
             {
-                day: 2,
-                focus: "System Design Basics",
-                tasks: [
-                    "Study scalability concepts",
-                    "Design a URL shortener",
-                    "Understand load balancing and caching"
-                ]
-            },
-            {
-                day: 3,
-                focus: "Behavioral Preparation",
-                tasks: [
-                    "Prepare 5 STAR stories",
-                    "Practice common behavioral questions",
-                    "Research company values and culture"
+                pattern: "Two Pointers",
+                description: "Efficiently searches pairs or triplets in sorted arrays, reducing time complexity from O(n²) to O(n).",
+                questions: [
+                    { title: "Single Number II", difficulty: "Medium", link: "leetcode.com", keyConcept: "Bitwise OR" },
+                    { title: "3Sum Problem", difficulty: "Medium", link: "leetcode.com", keyConcept: "Sort + Two Pointer search" }
                 ]
             }
-        ]
+        ];
     }
 
-    return data
+    if (!data.weaknessAnalysis || !Array.isArray(data.weaknessAnalysis) || data.weaknessAnalysis.length === 0) {
+        data.weaknessAnalysis = [
+            { weakness: "Strategic Project Quantifiability", improvement: "Translate your technical contributions into business metrics (e.g., 'reduced latency by 40%') instead of just listing features.", priority: "high" },
+            { weakness: "Implicit Tech Stack Alignment", improvement: "Explicitly mention core technologies required by the role in your project descriptions to clear ATS and human filters.", priority: "high" },
+            { weakness: "System Design Depth", improvement: "Prepare to deep-dive into architectural trade-offs, such as scalability vs. ease of maintenance for the specific technologies you used.", priority: "medium" },
+            { weakness: "Behavioral STAR Mapping", improvement: "Map your projects to common behavioral questions (Leadership, Conflict, Failure) ahead of time to ensure quick, structured answers.", priority: "medium" },
+            { weakness: "Unit Testing Coverage", improvement: "Mention specific testing frameworks and your approach to TDD to demonstrate commitment to code quality and production stability.", priority: "low" },
+            { weakness: "Niche Domain Expertise", improvement: "Bridge the gap between your general software skills and the specific business domain of the target role through research.", priority: "medium" }
+        ];
+    }
+
+    if (!data.cheatSheet || !Array.isArray(data.cheatSheet) || data.cheatSheet.length === 0) {
+        data.cheatSheet = [
+            { topic: "System Design & Scalability", content: "Master load balancing, horizontal scaling, and microservice communication patterns." },
+            { topic: "Database Optimization", content: "Understand indexing strategies, query performance tuning, and NoSQL vs SQL trade-offs." },
+            { topic: "Security Best Practices", content: "Focus on OAuth2, JWT implementation, and preventing common vulnerabilities like CSRF/XSS." },
+            { topic: "Cloud Architecture", content: "Familiarize yourself with AWS/GCP serverless components and container orchestration (Docker/K8s)." },
+            { topic: "Frontend Performance", content: "Optimize the critical rendering path, code splitting, and advanced asset caching strategies." },
+            { topic: "Clean Code & Refactoring", content: "Deep dive into SOLID principles and design patterns applicable to your primary programming language." }
+        ];
+    }
+
+    if (!data.interviewTips || !Array.isArray(data.interviewTips) || data.interviewTips.length === 0) {
+        data.interviewTips = [
+            "Research the company's engineering blog for recent challenges they faced.",
+            "Prepare STAR stories for each major project on your resume.",
+            "Ask clarifying questions before starting any technical solution.",
+            "Follow the 'Think out loud' principle during live coding."
+        ];
+    }
+
+    return data;
 }
 
 async function generatePdfFromHtml(htmlContent) {
     let browser;
     try {
         console.log("Launching Puppeteer...");
-        browser = await puppeteer.launch({
-            headless: 'new',
+
+        const launchOptions = {
+            headless: "new",
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
+                '--disable-web-security',
+                '--no-first-run',
                 '--no-zygote',
-                '--single-process'
+                '--single-process',
+                '--disable-extensions',
+                '--font-render-hinting=none',
             ]
-        });
+        };
+
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        }
+
+        browser = await puppeteer.launch(launchOptions);
 
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+        await page.setContent(htmlContent, { waitUntil: "networkidle0", timeout: 30000 });
 
         const pdfBuffer = await page.pdf({
             format: "A4",
@@ -263,8 +306,10 @@ async function generatePdfFromHtml(htmlContent) {
         return pdfBuffer;
 
     } catch (error) {
-        console.error("PDF Engine Error Detail:", error);
-        if (browser) await browser.close();
+        console.error("PDF Engine Error Detail:", error.message);
+        if (browser) {
+            try { await browser.close(); } catch (_) {}
+        }
         throw new Error(`PDF Engine Error: ${error.message}`);
     }
 }
@@ -275,19 +320,22 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
     })
 
-    const prompt = `Generate a highly professional, 1-page ATS-friendly resume HTML for a candidate with the following details:
+    const prompt = `Generate a comprehensive, high-impact 1-page ATS-friendly resume HTML for a candidate. 
+The goal is to fill the ENTIRE A4 page with high-quality, professional technical content, exactly like the reference style.
 
-Resume Text: ${resume}
-Self Description: ${selfDescription}
-Job Description: ${jobDescription}
+Candidate Data:
+- Resume Text: ${resume}
+- Self Description: ${selfDescription}
+- Job Description: ${jobDescription}
 
-The response should be a JSON object with a single field "html" which contains the COMPLETE HTML content of the resume.
+STRICT CONTENT REQUIREMENTS:
+1. SUMMARY: Write a rich 3-4 line summary highlighting specific technical strengths and impact.
+2. TECHNICAL SKILLS: Divide into 5-6 categories (Frontend, Backend, Languages, Databases, Tools, Cloud/DevOps). List many relevant technologies.
+3. EXPERIENCE: Generate 4-6 detailed, multi-line bullet points per role using the STAR method. Focus on technical challenges and quantifiable results.
+4. PROJECTS: You MUST generate 3 or 4 significant projects. For each project, write 4-5 high-impact bullet points detailing the architecture, tech stack, and features.
+5. ACHIEVEMENTS: Include 3-4 professional achievements or certifications with detailed descriptions.
 
-IMPORTANT DESIGN REQUIREMENTS:
-1. EXTREMELY STRICT LAYOUT. You MUST use exactly this structure and CSS.
-2. The entire document MUST fit on ONE single page. Do NOT make it verbose. Compress bullet points to 2-3 precise lines per item.
-
-REQUIRED CSS AND HTML TEMPLATE (USE THIS EXACTLY):
+STRICT DESIGN REQUIREMENTS (USE THIS TEMPLATE AND CSS):
 <!DOCTYPE html>
 <html>
 <head>
@@ -295,124 +343,155 @@ REQUIRED CSS AND HTML TEMPLATE (USE THIS EXACTLY):
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Times New Roman', Times, serif;
-            line-height: 1.25;
+            line-height: 1.4;
             color: #000;
-            max-width: 800px;
-            margin: 0 auto;
+            width: 100%;
+            margin: 0;
             background: #fff;
-            font-size: 11px;
+            padding: 12mm 15mm;
+            font-size: 13px;
         }
-        .header { text-align: center; margin-bottom: 6px; }
+        .header { text-align: center; margin-bottom: 12px; }
         h1 {
-            font-size: 26px;
-            color: #004d40; /* Teal/Blue color */
-            margin-bottom: 2px;
+            font-size: 34px;
+            color: #004d40;
+            margin-bottom: 4px;
             font-weight: bold;
+            letter-spacing: -0.01em;
         }
         .contact-info {
             display: flex;
             justify-content: center;
-            flex-wrap: wrap;
+            align-items: center;
             gap: 12px;
-            font-size: 11px;
-            margin-bottom: 6px;
+            font-size: 12.5px;
+            margin-bottom: 15px;
         }
+        .contact-info icon { margin-right: 4px; }
         .contact-info span { color: #000; font-weight: 600; }
+        
         h2.section-title {
-            font-size: 13px;
+            font-size: 17px;
             color: #004d40;
-            margin: 8px 0 4px 0;
-            padding-bottom: 2px;
-            border-bottom: 1.5px solid #d4af37; /* Gold line */
+            margin: 18px 0 10px 0;
+            padding-bottom: 4px;
+            border-bottom: 2.2px solid #d4af37;
             font-weight: bold;
-            text-transform: capitalize;
+            text-transform: uppercase;
         }
-        .summary p { text-align: justify; margin-bottom: 6px; }
+        .summary p { text-align: justify; margin-bottom: 10px; font-size: 13px; }
         .summary .summary-label { color: #004d40; font-weight: bold; }
         
         .skills-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            row-gap: 4px;
-            column-gap: 20px;
-            margin-bottom: 6px;
+            grid-template-columns: 1.1fr 1fr;
+            row-gap: 6px;
+            column-gap: 30px;
+            margin-bottom: 12px;
         }
-        .skill-item { font-size: 11px; }
+        .skill-item { font-size: 13px; }
         .skill-item .bold { font-weight: bold; }
 
         .two-column {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
+            margin-bottom: 3px;
         }
-        .two-column .left .bold { font-weight: bold; font-size: 12px; }
-        .two-column .left .italic { font-style: italic; font-size: 11px; }
-        .two-column .right { text-align: right; }
+        .two-column .left .bold { font-weight: bold; font-size: 14.5px; }
+        .two-column .left .italic { font-style: italic; font-size: 13.5px; }
+        .two-column .right { text-align: right; font-weight: 550; font-size: 13px; }
         
-        ul { margin-left: 18px; margin-bottom: 6px; }
-        li { font-size: 11px; margin-bottom: 2px; text-align: justify; }
-        li .bold { font-weight: bold; } /* Use class="bold" to highlight important words in li */
+        ul { margin-left: 22px; margin-bottom: 12px; }
+        li { font-size: 13px; margin-bottom: 5px; text-align: justify; }
+        li .bold { font-weight: bold; }
         
-        .item-container { margin-bottom: 6px; }
-        .sub-desc { font-size: 11px; font-style: italic; margin-bottom: 3px; }
+        .item-container { margin-bottom: 14px; }
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 11px;
+            color: #004d40;
+            font-style: italic;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>[Candidate Name]</h1>
         <div class="contact-info">
-            <span>✉ [Email]</span> <span>|</span> <span>github.com/[github]</span> <span>|</span> <span>[linkedin/portfolio]</span>
+            <span>✉ [Email]</span> <span>|</span> <span>github.com/[github]</span> <span>|</span> <span>linkedin.com/in/[linkedin]</span>
         </div>
     </div>
 
-    <!-- For Summary -->
     <div class="summary">
-        <p><span class="summary-label">Summary — [Role Title]</span> [Short 2-3 line summary focusing on robust details]</p>
+        <p><span class="summary-label">Summary — [Target Job Title]</span> [Rich, detailed 4-line summary highlighting years of experience and core technical achievements]</p>
     </div>
 
     <h2 class="section-title">Technical Skills</h2>
     <div class="skills-grid">
-        <div class="skill-item"><span class="bold">Frontend:</span> [Skills]</div>
-        <div class="skill-item"><span class="bold">Backend:</span> [Skills]</div>
-        <div class="skill-item"><span class="bold">Languages:</span> [Skills]</div>
-        <div class="skill-item"><span class="bold">Database:</span> [Skills]</div>
-        <div class="skill-item"><span class="bold">Tools:</span> [Skills]</div>
+        <div class="skill-item"><span class="bold">Frontend:</span> [Extensive list of frameworks/libs]</div>
+        <div class="skill-item"><span class="bold">Backend:</span> [Extensive list of server technologies]</div>
+        <div class="skill-item"><span class="bold">Languages:</span> [Programming languages]</div>
+        <div class="skill-item"><span class="bold">Databases:</span> [SQL and NoSQL technologies]</div>
+        <div class="skill-item"><span class="bold">Tools & DevOps:</span> [Cloud, CI/CD, Version Control]</div>
+        <div class="skill-item"><span class="bold">Others:</span> [Core CS concepts, methodologies]</div>
     </div>
 
     <h2 class="section-title">Education</h2>
     <div class="item-container">
         <div class="two-column">
-            <div class="left"><span class="bold">[Institution]</span><br><span class="italic">[Degree]</span></div>
-            <div class="right">[Location]<br>[Year]</div>
+            <div class="left"><span class="bold">[Institution Full Name]</span><br><span class="italic">[Degree with Major]</span></div>
+            <div class="right">[Location] | [Year]</div>
         </div>
     </div>
 
-    <h2 class="section-title">Experience</h2>
+    <h2 class="section-title">Professional Experience</h2>
     <div class="item-container">
         <div class="two-column">
-            <div class="left"><span class="bold">[Company]</span><br><span class="italic">[Role]</span></div>
+            <div class="left"><span class="bold">[Current/Recent Company]</span><br><span class="italic">[Recent Role]</span></div>
             <div class="right">[Dates]</div>
         </div>
         <ul>
-            <li><span class="bold">Action verb</span> descriptive result.</li>
+            <li><span class="bold">Architected and implemented</span> [detailed feature] using [technologies], resulting in [quantifiable improvement - e.g., 40% faster load times].</li>
+            <li><span class="bold">Led the development</span> of [system/module], ensuring [scalability/security] and handling [specific load/complexity].</li>
+            <li><span class="bold">Collaborated with</span> cross-functional teams to [deliver specific project], utilizing [methodology like Agile] and tools like [Jira/Git].</li>
+            <li><span class="bold">Optimized</span> [process/codebase] by [specific action], decreasing [costs/errors] by [percentage].</li>
+            <li><span class="bold">Mentored</span> junior developers and conducted code reviews to maintain high quality standards and best practices.</li>
         </ul>
     </div>
 
-    <h2 class="section-title">Projects</h2>
+    <h2 class="section-title">Key Projects</h2>
+    <!-- Project 1 -->
     <div class="item-container">
         <div class="two-column">
-            <div class="left"><span class="bold">[Project Name]</span></div>
-            <div class="right italic">[Tech Stack]</div>
+            <div class="left"><span class="bold">[Significant Project Name]</span></div>
+            <div class="right italic">[Full Tech Stack]</div>
         </div>
         <ul>
-            <li><span class="bold">Action verb</span> descriptive result focusing on impact.</li>
+            <li><span class="bold">Developed a full-stack</span> [Type of App] that [Core Utility], utilizing [Key Technologies] for [Specific Purpose].</li>
+            <li><span class="bold">Implemented robust</span> features like [Feature 1], [Feature 2], and [Feature 3], ensuring seamless user experience and performance.</li>
+            <li><span class="bold">Built a modular</span> architecture supporting [specific capability] and integrated [API/Service] for [functionality].</li>
+            <li><span class="bold">Deployed and managed</span> on [Platform] with [CI/CD tools], achieving [uptime/performance metric].</li>
         </ul>
     </div>
+    <!-- Add at least 2 more projects here following the same structure -->
 
     <h2 class="section-title">Achievements</h2>
     <ul>
-        <li><span class="bold">[Achievement Title]:</span> [Detail]</li>
+        <li><span class="bold">[Achievement 1 Title]:</span> [Detailed description of the recognition, competition or certification with technical context]</li>
+        <li><span class="bold">[Achievement 2 Title]:</span> [Detail]</li>
+        <li><span class="bold">[Achievement 3 Title]:</span> [Detail]</li>
     </ul>
+
+    <div class="footer">
+        <span>&lt;/&gt;</span> Built with precision and passion <span>&lt;/&gt;</span>
+    </div>
 </body>
 </html>
 
@@ -424,14 +503,14 @@ Return ONLY raw JSON matching schema schema { "html": "<full html here>" } Witho
             messages: [
                 {
                     role: "system",
-                    content: "You are an elite, highly precise resume formatter. You MUST strictly obey the specified CSS layout, do NOT change colors or border styles, use exactly the HTML structures shown. Fit everything into concise, dense text to keep it at 1 page. ALWAYS return valid JSON."
+                    content: "You are an elite, highly precise resume formatter. Your MISSION is to generate a RICH, FULL-PAGE resume. You MUST be detailed and avoid brevity. Every section MUST be substantial enough to occupy the full A4 page space. STRICTLY use the provided structure and DO NOT simplify. ALWAYS return valid JSON."
                 },
                 {
                     role: "user",
                     content: prompt
                 }
             ],
-            temperature: 0.3,
+            temperature: 0.5,
             max_tokens: 4096
         })
 
@@ -439,106 +518,55 @@ Return ONLY raw JSON matching schema schema { "html": "<full html here>" } Witho
 
         const cleaned = text
             .replace(/```json|```/g, "")
-            .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
-            .trim()
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "")
+            .trim();
 
         let jsonContent;
         try {
             jsonContent = JSON.parse(cleaned)
         } catch (parseError) {
             console.error("JSON Parse Error:", parseError)
-            // Just use the explicit CSS fallback we gave it!
-            jsonContent = {
-                html: `<!DOCTYPE html>
+
+            const match = text.match(/\{[\s\S]*\}/);
+            if (match) {
+                try {
+                    jsonContent = JSON.parse(match[0]);
+                } catch (e) {
+                    console.error("Second attempt to parse JSON failed");
+                }
+            }
+
+            if (!jsonContent) {
+                jsonContent = {
+                    html: `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Resume</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Times New Roman', Times, serif; line-height: 1.5; color: #000; width: 100%; margin: 0; background: #fff; font-size: 13.5px; padding: 0; }
+        body { font-family: 'Times New Roman', Times, serif; line-height: 1.5; color: #000; width: 100%; margin: 0; background: #fff; font-size: 13.5px; padding: 40px; }
         .header { text-align: center; margin-bottom: 24px; }
-        h1 { font-size: 38px; color: #004d40; margin-bottom: 8px; font-weight: bold; letter-spacing: -0.01em; }
-        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; font-size: 12px; margin-bottom: 12px; }
-        .contact-info span { color: #000; font-weight: 600; }
-        h2.section-title { font-size: 18px; color: #004d40; margin: 25px 0 10px 0; padding-bottom: 5px; border-bottom: 2.5px solid #d4af37; font-weight: bold; text-transform: uppercase; }
-        .summary p { text-align: justify; margin-bottom: 10px; }
-        .summary .summary-label { color: #004d40; font-weight: bold; }
-        .skills-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: 8px; column-gap: 25px; margin-bottom: 12px; }
-        .skill-item { font-size: 13px; }
-        .skill-item .bold { font-weight: bold; }
-        .two-column { display: flex; justify-content: space-between; align-items: baseline; }
-        .two-column .left .bold { font-weight: bold; font-size: 14px; }
-        .two-column .left .italic { font-style: italic; font-size: 13px; }
-        .two-column .right { text-align: right; }
-        ul { margin-left: 20px; margin-bottom: 12px; }
-        li { font-size: 13px; margin-bottom: 6px; text-align: justify; }
-        li .bold { font-weight: bold; }
-        .item-container { margin-bottom: 12px; }
+        h1 { font-size: 32px; color: #004d40; margin-bottom: 8px; font-weight: bold; }
+        .contact-info { display: flex; justify-content: center; gap: 15px; font-size: 12px; margin-bottom: 15px; }
+        h2.section-title { font-size: 18px; color: #004d40; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #d4af37; font-weight: bold; text-transform: uppercase; }
+        .content { font-size: 13px; text-align: justify; white-space: pre-wrap; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Adarsh Kumar</h1>
+        <h1>Resume</h1>
         <div class="contact-info">
-            <span>✉ adarsh99733207@gmail.com</span> <span>|</span> <span>github.com/Adshkumar</span> <span>|</span> <span>adsingh-portfolio.vercel.app</span>
+            <span>Professional Profile Generated by AI</span>
         </div>
     </div>
-    <div class="summary">
-        <p><span class="summary-label">Summary — Full-Stack Developer</span> skilled in the MERN stack, building scalable web applications and real-time systems with a focus on clean architecture and performance.</p>
-    </div>
-    <h2 class="section-title">Technical Skills</h2>
-    <div class="skills-grid">
-        <div class="skill-item"><span class="bold">Frontend:</span> JavaScript, React, HTML5 & CSS3</div>
-        <div class="skill-item"><span class="bold">Database:</span> MongoDB (Mongoose)</div>
-        <div class="skill-item"><span class="bold">Backend:</span> Node.js, Express.js, MongoDB</div>
-        <div class="skill-item"><span class="bold">Tools:</span> GitHub, VS Code, Postman</div>
-        <div class="skill-item"><span class="bold">Languages:</span> C++, JavaScript</div>
-        <div class="skill-item"><span class="bold">Others:</span> Data Structures & Algorithms</div>
-    </div>
-    <h2 class="section-title">Education</h2>
-    <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">Chhotu Ram Rural Institute of Technology</span><br><span class="italic">Diploma in Computer Science</span></div><div class="right">New Delhi, Delhi<br>2024 – Present</div></div>
-    </div>
-    <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">Kids Camp International School</span><br><span class="italic">Class X (CBSE) — 78%</span></div><div class="right">Muzaffarpur, Bihar<br>2024</div></div>
-    </div>
-
-    <h2 class="section-title">Experience</h2>
-    <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">AKM TECHIE</span><br><span class="italic">Frontend Web Development Intern</span></div><div class="right">June 2025 – July 2025</div></div>
-        <ul>
-            <li><span class="bold">Developed</span> a multi-page responsive website with modern UI components including admin dashboard, client portal, and service pages</li>
-            <li><span class="bold">Created custom CSS styling</span> ensuring visual consistency and responsive design across all devices</li>
-            <li><span class="bold">Implemented interactive user interfaces</span> for contact forms, service demonstrations, and business statistics display</li>
-        </ul>
-    </div>
-
-    <h2 class="section-title">Projects</h2>
-    <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">AI Interview Preparation Platform</span></div><div class="right italic">React.js, Node.js, Express.js, MongoDB, JWT, REST API</div></div>
-        <ul>
-            <li><span class="bold">Engineered a full-stack AI-powered interview preparation platform</span> enabling resume uploads and automated interview report generation from job descriptions</li>
-            <li><span class="bold">Built a modular MVC backend architecture</span> (controllers, routes, models, middleware, services) ensuring scalability and maintainability</li>
-            <li><span class="bold">Integrated JWT authentication with protected routes</span> for secure user sessions and API access</li>
-            <li><span class="bold">Leveraged AI services</span> for resume analysis and intelligent interview report generation</li>
-        </ul>
-    </div>
-    <div class="item-container">
-        <div class="two-column"><div class="left"><span class="bold">Uber-Backend System</span></div><div class="right italic">Node.js, Express.js, MongoDB, Socket.IO, Razorpay</div></div>
-        <ul>
-            <li><span class="bold">Designed and developed a scalable ride-booking backend system</span> with user authentication, ride lifecycle management, and driver assignment</li>
-            <li><span class="bold">Implemented real-time communication using Socket.IO</span> for ride requests, driver notifications, and live status updates</li>
-        </ul>
-    </div>
-
-    <h2 class="section-title">Achievements</h2>
-    <ul>
-        <li><span class="bold">LeetCode Badge:</span> Earned problem-solving badge for consistent performance and coding proficiency</li>
-        <li><span class="bold">Project Portfolio:</span> Delivered 4+ full-stack projects with real-time features and production-ready code</li>
-    </ul>
+    <h2 class="section-title">Summary</h2>
+    <div class="content">${selfDescription || "Professional seeking dynamic opportunities."}</div>
+    <h2 class="section-title">Profile Details</h2>
+    <div class="content">${resume.substring(0, 2000)}${resume.length > 2000 ? '...' : ''}</div>
 </body>
 </html>`
+                };
             }
         }
 

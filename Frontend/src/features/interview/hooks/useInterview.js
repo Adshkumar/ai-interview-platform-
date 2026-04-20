@@ -2,7 +2,8 @@ import {
     getAllInterviewReports,
     generateInterviewReport,
     getInterviewReportById,
-    generateResumePdf
+    generateResumePdf,
+    deleteInterviewReport
 } from "../services/interview.api"
 
 import { useContext } from "react"
@@ -18,7 +19,6 @@ export const useInterview = () => {
 
     const { loading, setLoading, report, setReport, reports, setReports } = context
 
-    // Generate Interview Report
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
 
         setLoading(true)
@@ -37,14 +37,12 @@ export const useInterview = () => {
             }
 
         } catch (error) {
-            console.log("Generate report error:", error)
         } finally {
             setLoading(false)
         }
     }
 
 
-    // Get Report By ID
     const getReportById = async (interviewId) => {
 
         if (!interviewId) return
@@ -60,7 +58,6 @@ export const useInterview = () => {
             }
 
         } catch (error) {
-            console.log("Fetch report error:", error)
         } finally {
             setLoading(false)
         }
@@ -77,12 +74,10 @@ export const useInterview = () => {
             }
 
         } catch (error) {
-            console.log("Fetch reports error:", error)
         } finally {
             setLoading(false)
         }
     }
-    // Download Resume PDF
     const getResumePdf = async (interviewReportId) => {
         if (!interviewReportId) return
         setLoading(true)
@@ -93,7 +88,6 @@ export const useInterview = () => {
             if (response.type === 'application/json') {
                 const text = await response.text();
                 const errorData = JSON.parse(text);
-                console.error("PDF generation failed:", errorData);
                 alert(`Error: ${errorData.message || 'Failed to generate PDF'}`);
                 return;
             }
@@ -112,8 +106,21 @@ export const useInterview = () => {
             }, 100)
 
         } catch (error) {
-            console.error("PDF download error:", error)
             alert("Unexpected error downloading PDF. Please check server logs.");
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const deleteReport = async (interviewId) => {
+        if (!interviewId) return
+        setLoading(true)
+        try {
+            await deleteInterviewReport(interviewId)
+            setReports(prev => prev.filter(r => r._id !== interviewId))
+            return { success: true }
+        } catch (error) {
+            return { success: false, error }
         } finally {
             setLoading(false)
         }
@@ -126,7 +133,8 @@ export const useInterview = () => {
         generateReport,
         getReportById,
         getReports,
-        getResumePdf
+        getResumePdf,
+        deleteReport
     }
 
 }
