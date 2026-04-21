@@ -9,6 +9,7 @@ const Home = () => {
     const { loading, generateReport, reports, getReports, deleteReport } = useInterview()
     const [jobDescription, setJobDescription] = useState("")
     const [selfDescription, setSelfDescription] = useState("")
+    const [showReports, setShowReports] = useState(false)
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
@@ -38,9 +39,9 @@ const Home = () => {
             <header className="interview-mobile-header">
                 <div style={{ width: '40px' }}></div> {/* Spacer for left balance */}
 
-                <div 
-                    className="mobile-logo" 
-                    onClick={() => navigate('/')} 
+                <div
+                    className="mobile-logo"
+                    onClick={() => navigate('/')}
                     style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                 >
                     Interview<span className="accent">AI</span>
@@ -74,7 +75,7 @@ const Home = () => {
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
                             maxLength={5000}
                         />
-                        <div className='char-counter'>0 / 5000 chars</div>
+                        <div className='char-counter'>{jobDescription?.length || 0} / 5000 chars</div>
                     </div>
 
                     {/* Vertical Divider */}
@@ -145,18 +146,25 @@ const Home = () => {
             {/* Recent Reports List */}
             {reports.length > 0 && (
                 <section className='recent-reports'>
-                    <h2>My Recent Interview Plans</h2>
+                    <div 
+                        onClick={() => setShowReports(!showReports)} 
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px' }}
+                    >
+                        <h2 style={{ margin: 0 }}>My Recent Interview Plans</h2>
+                        <svg style={{ transform: showReports ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    {showReports && (
                     <ul className='reports-list'>
                         {reports.map(report => (
                             <li key={report._id} className='report-item' onClick={() => navigate(`/interview/${report._id}`)}>
                                 <div className="report-item__header">
                                     <h3>{report.title || 'Untitled Position'}</h3>
-                                    <button 
+                                    <button
                                         className="delete-btn"
                                         title="Delete this interview report"
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            if(window.confirm('Are you sure you want to delete this interview plan? This action cannot be undone.')) {
+                                            if (window.confirm('Are you sure you want to delete this interview plan? This action cannot be undone.')) {
                                                 const res = await deleteReport(report._id);
                                                 if (!res?.success) {
                                                     const errorMsg = res?.error?.response?.data?.message || res?.error?.message || "Unknown error";
@@ -168,18 +176,19 @@ const Home = () => {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                     </button>
                                 </div>
-                                 <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
-                                 <div className="report-item__footer">
+                                <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
+                                <div className="report-item__footer">
                                     <p className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 65 ? 'score--mid' : 'score--low'}`}>
                                         Match Score: {report.matchScore}%
                                     </p>
                                     {report.weaknessAnalysis?.some(w => w.priority === 'high') && (
                                         <span className="gap-alert-badge">Critical Gaps found</span>
                                     )}
-                                 </div>
-                             </li>
+                                </div>
+                            </li>
                         ))}
                     </ul>
+                    )}
                 </section>
             )}
 

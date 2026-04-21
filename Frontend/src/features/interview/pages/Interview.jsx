@@ -13,7 +13,6 @@ const NAV_ITEMS = [
     { id: 'dsa', label: 'Data Structures', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
 ];
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 const QuestionCard = ({ item, index }) => {
     const [open, setOpen] = useState(false)
     return (
@@ -64,12 +63,11 @@ const Interview = () => {
     const navigate = useNavigate()
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const [activeNav, setActiveNav] = useState('technical')
-    const [navHistory, setNavHistory] = useState([])  // tracks section visit history
+    const [navHistory, setNavHistory] = useState([])
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen)
 
-    // Navigate to a section, push current section onto the history stack
     const goToSection = (sectionId) => {
         if (sectionId === activeNav) return
         setNavHistory(prev => [...prev, activeNav])
@@ -77,7 +75,6 @@ const Interview = () => {
         setIsMobileMenuOpen(false)
     }
 
-    // Back: pop section history first; if empty, go back in browser history
     const handleBack = () => {
         if (navHistory.length > 0) {
             const prev = navHistory[navHistory.length - 1]
@@ -88,7 +85,6 @@ const Interview = () => {
         }
     }
 
-    // Lock scroll when mobile menu is open
     useEffect(() => {
         if (isMobileMenuOpen) {
             document.body.style.overflow = 'hidden'

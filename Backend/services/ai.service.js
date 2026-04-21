@@ -128,10 +128,26 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                 pattern: "Pattern 1",
                 description: "...",
                 questions: [
-                    { title: "Q1", difficulty: "...", link: "...", keyConcept: "..." },
-                    { title: "Q2", difficulty: "...", link: "...", keyConcept: "..." },
-                    { title: "Q3", difficulty: "...", link: "...", keyConcept: "..." },
-                    { title: "Q4", difficulty: "...", link: "...", keyConcept: "..." }
+                    { title: "Q1", easy: "...", link: "...", keyConcept: "..." },
+                    { title: "Q2", easy: "...", link: "...", keyConcept: "..." },
+                    { title: "Q3", medium: "...", link: "...", keyConcept: "..." },
+                    { title: "Q4", hard: "...", link: "...", keyConcept: "..." },
+                    { title: "Q5", easy: "...", link: "...", keyConcept: "..." },
+                    { title: "Q6", medium: "...", link: "...", keyConcept: "..." },
+                    { title: "Q7", hard: "...", link: "...", keyConcept: "..." },
+                    { title: "Q8", easy: "...", link: "...", keyConcept: "..." },
+                    { title: "Q9", medium: "...", link: "...", keyConcept: "..." },
+                    { title: "Q10", hard: "...", link: "...", keyConcept: "..." },
+                    { title: "Q11", easy: "...", link: "...", keyConcept: "..." },
+                    { title: "Q12", medium: "...", link: "...", keyConcept: "..." },
+                    { title: "Q13", hard: "...", link: "...", keyConcept: "..." },
+                    { title: "Q14", easy: "...", link: "...", keyConcept: "..." },
+                    { title: "Q15", difficulty: "...", link: "...", keyConcept: "..." },
+                    { title: "Q16", difficulty: "...", link: "...", keyConcept: "..." },
+                    { title: "Q17", difficulty: "...", link: "...", keyConcept: "..." },
+                    { title: "Q18", medium: "...", link: "...", keyConcept: "..." },
+                    { title: "Q19", hard: "...", link: "...", keyConcept: "..." },
+                    { title: "Q20", easy: "...", link: "...", keyConcept: "..." },
                 ]
             }
         ]
@@ -147,12 +163,15 @@ Self Description: ${selfDescription || "Not provided"}
 STRICT QUANTITY & CONTENT REQUIREMENTS:
 1. TECHNICAL QUESTIONS: Exactly 8 specialized questions. For each question, the 'intention' and 'answer' MUST be comprehensive (at least 4-5 detailed lines each).
 2. BEHAVIORAL QUESTIONS: Exactly 8 STAR-method based questions. For each question, the 'intention' and 'answer' MUST be comprehensive (at least 4-5 detailed lines each).
-3. PREPARATION PLAN: A full 14-DAY study roadmap.
+3. PREPARATION PLAN: A full 14-DAY study roadmap. 
+    - For each day, provide a focus area and 3-5 specific tasks.
 4. EXPERT TIPS: At least 8-10 high-stakes interview strategy tips.
+    - For each tip, provide a detailed explanation.
 5. SKILL GAPS: Generate 8-10 specific technology or methodology keywords that are missing from the resume but required by the JD.
 6. CRITICAL GAP ANALYSIS: Exactly 5-6 high-impact vulnerabilities. Compare the Resume against the Job Description specifically to find what is MISSING. For each gap, provide a detailed 'improvement' strategy.
+    - For each gap, provide a detailed explanation.
 7. TECHNICAL MASTERY (CHEAT SHEET): A list of 8-10 core technical topics the candidate MUST master specifically for this role based on their resume gaps.
-8. DSA MASTERY SECTION (CRITICAL): Generate 8-10 algorithmic PATTERNS (e.g., Sliding Window, Two Pointers, BFS/DFS, DP, Graphs, Greedy, LINKED LIST, HEAP, BINARY SEARCH).
+8. DSA MASTERY SECTION (CRITICAL): Generate 8-10 algorithmic PATTERNS (e.g., Sliding Window, Two Pointers, BFS/DFS, DP, Graphs, Greedy, LINKED LIST, HEAP, BINARY SEARCH etc).
    - For each pattern, provide 5-7 most frequent questions asked in MNCs (Google, Meta, Amazon).
    - Include difficulty, a brief concept hint, and a placeholder LeetCode link.
 
@@ -214,19 +233,114 @@ NO PREAMBLE. NO MARKDOWN. ONLY JSON.`;
     if (!data.dsaAnalysis || !Array.isArray(data.dsaAnalysis) || data.dsaAnalysis.length === 0) {
         data.dsaAnalysis = [
             {
-                pattern: "Sliding Window",
-                description: "Optimizes problems involving arrays or substrings by maintaining a window that slides over the collection.",
+                pattern: "Heap / Priority Queue",
+                description: "Used for efficiently retrieving min/max elements. Common in Top-K, scheduling, and greedy optimization problems.",
                 questions: [
-                    { title: "Maximum Sum Subarray of size K", difficulty: "Easy", link: "leetcode.com", keyConcept: "Fixed-size window" },
-                    { title: "Longest Substring with K Distinct Characters", difficulty: "Medium", link: "leetcode.com", keyConcept: "Variable-size window with Hash Map" }
+                    { title: "Top K Frequent Elements", difficulty: "Medium", link: "https://leetcode.com/problems/top-k-frequent-elements/", keyConcept: "Min Heap + Frequency Map" },
+                    { title: "Kth Largest Element in an Array", difficulty: "Medium", link: "https://leetcode.com/problems/kth-largest-element-in-an-array/", keyConcept: "Heap / Quick Select" },
+                    { title: "Find Median from Data Stream", difficulty: "Hard", link: "https://leetcode.com/problems/find-median-from-data-stream/", keyConcept: "Two Heaps (Max + Min)" },
+                    { title: "Merge k Sorted Lists", difficulty: "Hard", link: "https://leetcode.com/problems/merge-k-sorted-lists/", keyConcept: "Min Heap" },
+                    { title: "Task Scheduler", difficulty: "Medium", link: "https://leetcode.com/problems/task-scheduler/", keyConcept: "Greedy + Max Heap" }
+                ]
+            },
+            {
+                pattern: "Linked List",
+                description: "Involves pointer manipulation like reversing, merging, cycle detection, and node traversal.",
+                questions: [
+                    { title: "Reverse Linked List", difficulty: "Easy", link: "https://leetcode.com/problems/reverse-linked-list/", keyConcept: "Iterative Pointer Reversal" },
+                    { title: "Linked List Cycle", difficulty: "Easy", link: "https://leetcode.com/problems/linked-list-cycle/", keyConcept: "Floyd’s Cycle Detection" },
+                    { title: "Merge Two Sorted Lists", difficulty: "Easy", link: "https://leetcode.com/problems/merge-two-sorted-lists/", keyConcept: "Two Pointer Merge" },
+                    { title: "Remove Nth Node From End", difficulty: "Medium", link: "https://leetcode.com/problems/remove-nth-node-from-end-of-list/", keyConcept: "Two Pointer Gap Technique" },
+                    { title: "Reverse Nodes in k-Group", difficulty: "Hard", link: "https://leetcode.com/problems/reverse-nodes-in-k-group/", keyConcept: "Group Reversal + Recursion" }
                 ]
             },
             {
                 pattern: "Two Pointers",
-                description: "Efficiently searches pairs or triplets in sorted arrays, reducing time complexity from O(n²) to O(n).",
+                description: "Optimizes problems on sorted arrays or strings by using two indices instead of nested loops.",
                 questions: [
-                    { title: "Single Number II", difficulty: "Medium", link: "leetcode.com", keyConcept: "Bitwise OR" },
-                    { title: "3Sum Problem", difficulty: "Medium", link: "leetcode.com", keyConcept: "Sort + Two Pointer search" }
+                    { title: "Two Sum II - Input Array Is Sorted", difficulty: "Medium", link: "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/", keyConcept: "Left-Right Pointer Movement" },
+                    { title: "3Sum", difficulty: "Medium", link: "https://leetcode.com/problems/3sum/", keyConcept: "Sorting + Two Pointer" },
+                    { title: "Container With Most Water", difficulty: "Medium", link: "https://leetcode.com/problems/container-with-most-water/", keyConcept: "Greedy Two Pointer" },
+                    { title: "Remove Duplicates from Sorted Array", difficulty: "Easy", link: "https://leetcode.com/problems/remove-duplicates-from-sorted-array/", keyConcept: "Slow-Fast Pointer" },
+                    { title: "Valid Palindrome", difficulty: "Easy", link: "https://leetcode.com/problems/valid-palindrome/", keyConcept: "Two Pointer String Check" }
+                ]
+            },
+            {
+                pattern: "Binary Search",
+                description: "Efficient searching technique on sorted data or search space problems using divide and conquer.",
+                questions: [
+                    { title: "Binary Search", difficulty: "Easy", link: "https://leetcode.com/problems/binary-search/", keyConcept: "Classic Binary Search" },
+                    { title: "Search in Rotated Sorted Array", difficulty: "Medium", link: "https://leetcode.com/problems/search-in-rotated-sorted-array/", keyConcept: "Modified Binary Search" },
+                    { title: "Find First and Last Position", difficulty: "Medium", link: "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/", keyConcept: "Lower & Upper Bound" },
+                    { title: "Search a 2D Matrix", difficulty: "Medium", link: "https://leetcode.com/problems/search-a-2d-matrix/", keyConcept: "Flattened Binary Search" },
+                    { title: "Koko Eating Bananas", difficulty: "Medium", link: "https://leetcode.com/problems/koko-eating-bananas/", keyConcept: "Binary Search on Answer" }
+                ]
+            },
+            {
+                pattern: "In-place Manipulation",
+                description: "Modifies the input data structure directly without extra space.",
+                questions: [
+                    { title: "Move Zeroes", difficulty: "Easy", link: "https://leetcode.com/problems/move-zeroes/", keyConcept: "Two Pointer Swap" },
+                    { title: "Sort Colors", difficulty: "Medium", link: "https://leetcode.com/problems/sort-colors/", keyConcept: "Dutch National Flag" },
+                    { title: "Next Permutation", difficulty: "Medium", link: "https://leetcode.com/problems/next-permutation/", keyConcept: "Greedy + Reverse" },
+                    { title: "Rotate Array", difficulty: "Medium", link: "https://leetcode.com/problems/rotate-array/", keyConcept: "Reversal Algorithm" },
+                    { title: "Set Matrix Zeroes", difficulty: "Medium", link: "https://leetcode.com/problems/set-matrix-zeroes/", keyConcept: "In-place Marking" }
+                ]
+            },
+
+            {
+                pattern: "Sliding Window",
+                description: "Efficient for subarray/substring problems.",
+                questions: [
+                    { title: "Maximum Sum Subarray of Size K", difficulty: "Easy", link: "https://leetcode.com/problems/maximum-average-subarray-i/", keyConcept: "Fixed Window" },
+                    { title: "Longest Substring Without Repeating Characters", difficulty: "Medium", link: "https://leetcode.com/problems/longest-substring-without-repeating-characters/", keyConcept: "Variable Window" },
+                    { title: "Minimum Window Substring", difficulty: "Hard", link: "https://leetcode.com/problems/minimum-window-substring/", keyConcept: "Shrink Window" },
+                    { title: "Permutation in String", difficulty: "Medium", link: "https://leetcode.com/problems/permutation-in-string/", keyConcept: "Frequency Count" },
+                    { title: "Sliding Window Maximum", difficulty: "Hard", link: "https://leetcode.com/problems/sliding-window-maximum/", keyConcept: "Deque" }
+                ]
+            },
+            {
+                pattern: "Prefix Sum",
+                description: "Used for fast range queries.",
+                questions: [
+                    { title: "Subarray Sum Equals K", difficulty: "Medium", link: "https://leetcode.com/problems/subarray-sum-equals-k/", keyConcept: "Prefix + HashMap" },
+                    { title: "Product of Array Except Self", difficulty: "Medium", link: "https://leetcode.com/problems/product-of-array-except-self/", keyConcept: "Prefix + Suffix" },
+                    { title: "Range Sum Query", difficulty: "Easy", link: "https://leetcode.com/problems/range-sum-query-immutable/", keyConcept: "Prefix Array" },
+                    { title: "Continuous Subarray Sum", difficulty: "Medium", link: "https://leetcode.com/problems/continuous-subarray-sum/", keyConcept: "Modulo Trick" },
+                    { title: "Find Pivot Index", difficulty: "Easy", link: "https://leetcode.com/problems/find-pivot-index/", keyConcept: "Balance Index" }
+                ]
+            },
+            {
+                pattern: "Dynamic Programming",
+                description: "Breaks problems into overlapping subproblems.",
+                questions: [
+                    { title: "Climbing Stairs", difficulty: "Easy", link: "https://leetcode.com/problems/climbing-stairs/", keyConcept: "Fibonacci DP" },
+                    { title: "House Robber", difficulty: "Medium", link: "https://leetcode.com/problems/house-robber/", keyConcept: "DP Optimization" },
+                    { title: "Longest Increasing Subsequence", difficulty: "Medium", link: "https://leetcode.com/problems/longest-increasing-subsequence/", keyConcept: "DP + Binary Search" },
+                    { title: "Longest Common Subsequence", difficulty: "Medium", link: "https://leetcode.com/problems/longest-common-subsequence/", keyConcept: "2D DP" },
+                    { title: "Edit Distance", difficulty: "Hard", link: "https://leetcode.com/problems/edit-distance/", keyConcept: "DP Table" }
+                ]
+            },
+            {
+                pattern: "Graph (BFS / DFS)",
+                description: "Used for traversal and connectivity problems.",
+                questions: [
+                    { title: "Number of Islands", difficulty: "Medium", link: "https://leetcode.com/problems/number-of-islands/", keyConcept: "DFS Grid" },
+                    { title: "Clone Graph", difficulty: "Medium", link: "https://leetcode.com/problems/clone-graph/", keyConcept: "Graph Traversal" },
+                    { title: "Course Schedule", difficulty: "Medium", link: "https://leetcode.com/problems/course-schedule/", keyConcept: "Cycle Detection" },
+                    { title: "Rotting Oranges", difficulty: "Medium", link: "https://leetcode.com/problems/rotting-oranges/", keyConcept: "BFS" },
+                    { title: "Pacific Atlantic Water Flow", difficulty: "Medium", link: "https://leetcode.com/problems/pacific-atlantic-water-flow/", keyConcept: "DFS" }
+                ]
+            },
+            {
+                pattern: "Tree",
+                description: "Binary tree traversal and recursion problems.",
+                questions: [
+                    { title: "Maximum Depth of Binary Tree", difficulty: "Easy", link: "https://leetcode.com/problems/maximum-depth-of-binary-tree/", keyConcept: "DFS" },
+                    { title: "Level Order Traversal", difficulty: "Medium", link: "https://leetcode.com/problems/binary-tree-level-order-traversal/", keyConcept: "BFS" },
+                    { title: "Lowest Common Ancestor", difficulty: "Medium", link: "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/", keyConcept: "Recursion" },
+                    { title: "Diameter of Binary Tree", difficulty: "Easy", link: "https://leetcode.com/problems/diameter-of-binary-tree/", keyConcept: "DFS Height" },
+                    { title: "Serialize & Deserialize", difficulty: "Hard", link: "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/", keyConcept: "Tree Encoding" }
                 ]
             }
         ];
@@ -259,7 +373,14 @@ NO PREAMBLE. NO MARKDOWN. ONLY JSON.`;
             "Research the company's engineering blog for recent challenges they faced.",
             "Prepare STAR stories for each major project on your resume.",
             "Ask clarifying questions before starting any technical solution.",
-            "Follow the 'Think out loud' principle during live coding."
+            "Follow the 'Think out loud' principle during live coding.",
+            "Always start with the brute-force approach to establish a baseline.",
+            "Discuss time and space complexity before optimizing.",
+            "Handle edge cases explicitly in your code.",
+            "Test your solution with provided examples and your own test cases.",
+            "If you get stuck, rephrase the problem or draw a diagram.",
+            "Keep your code clean and modular.",
+            "Don't be afraid to ask for hints if you're truly stuck."
         ];
     }
 
@@ -308,7 +429,7 @@ async function generatePdfFromHtml(htmlContent) {
     } catch (error) {
         console.error("PDF Engine Error Detail:", error.message);
         if (browser) {
-            try { await browser.close(); } catch (_) {}
+            try { await browser.close(); } catch (_) { }
         }
         throw new Error(`PDF Engine Error: ${error.message}`);
     }
