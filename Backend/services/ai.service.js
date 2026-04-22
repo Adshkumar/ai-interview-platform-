@@ -161,8 +161,8 @@ Job Description/Title: ${jobDescription || "General Software Role"}
 Self Description: ${selfDescription || "Not provided"}
 
 STRICT QUANTITY & CONTENT REQUIREMENTS:
-1. TECHNICAL QUESTIONS: Exactly 8 specialized questions. For each question, the 'intention' MUST be exactly 3-4 lines and the 'answer' MUST be exactly 6-7 lines.
-2. BEHAVIORAL QUESTIONS: Exactly 8 STAR-method based questions. For each question, the 'intention' MUST be exactly 3-4 lines and the 'answer' MUST be exactly 6-7 lines.
+1. TECHNICAL QUESTIONS: Exactly 8 specialized questions. For each question, the 'intention' MUST be exactly 4-5 lines and the 'answer' MUST be exactly 7-8 lines.
+2. BEHAVIORAL QUESTIONS: Exactly 8 STAR-method based questions. For each question, the 'intention' MUST be exactly 4-5 lines and the 'answer' MUST be exactly 7-8 lines.
 3. PREPARATION PLAN: A full 14-DAY study roadmap. 
     - For each day, provide a focus area and 3-5 specific tasks.
 4. EXPERT TIPS: At least 8-10 high-stakes interview strategy tips.
