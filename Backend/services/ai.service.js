@@ -161,8 +161,8 @@ Job Description/Title: ${jobDescription || "General Software Role"}
 Self Description: ${selfDescription || "Not provided"}
 
 STRICT QUANTITY & CONTENT REQUIREMENTS:
-1. TECHNICAL QUESTIONS: Exactly 8 specialized questions. For each question, the 'intention' and 'answer' MUST be comprehensive (at least 4-5 lines of answers and 2-3 lines of intention and answer each).
-2. BEHAVIORAL QUESTIONS: Exactly 8 STAR-method based questions. For each question, the 'intention' and 'answer' MUST be comprehensive (at least 4-5 lines of answers and 2-3 lines of intention and answer each).
+1. TECHNICAL QUESTIONS: Exactly 8 specialized questions. For each question, the 'intention' MUST be exactly 2-3 lines and the 'answer' MUST be exactly 5-6 lines.
+2. BEHAVIORAL QUESTIONS: Exactly 8 STAR-method based questions. For each question, the 'intention' MUST be exactly 2-3 lines and the 'answer' MUST be exactly 5-6 lines.
 3. PREPARATION PLAN: A full 14-DAY study roadmap. 
     - For each day, provide a focus area and 3-5 specific tasks.
 4. EXPERT TIPS: At least 8-10 high-stakes interview strategy tips.
@@ -177,7 +177,7 @@ STRICT QUANTITY & CONTENT REQUIREMENTS:
 
 OUTPUT RULES:
 1. Return ONLY a JSON object.
-2. Follow this structure EXACTLY (ensure intention and answer are long-form):
+2. Follow this structure EXACTLY (ensure intention is exactly 2-3 lines and answer is exactly 5-6 lines):
 ${JSON.stringify(jsonExample, null, 2)}
 
 NO PREAMBLE. NO MARKDOWN. ONLY JSON.`;
