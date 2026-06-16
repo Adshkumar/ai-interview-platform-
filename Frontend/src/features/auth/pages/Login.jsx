@@ -13,18 +13,15 @@ const Login = () => {
     const [error, setError] = useState("")
     const [serverWaking, setServerWaking] = useState(false)
 
-    // Detect if the backend is hibernated on first load
     useEffect(() => {
         const ping = async () => {
             try {
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/health`, {
                     signal: AbortSignal.timeout(3000)
                 })
-                // If we get anything back, server is awake. 404 is fine too.
             } catch {
-                // Server is sleeping — show the wake-up banner
                 setServerWaking(true)
-                // Wait and try again after 15s
+                
                 setTimeout(() => setServerWaking(false), 15000)
             }
         }
@@ -92,4 +89,4 @@ const Login = () => {
     )
 }
 
-export default Login
+export default Login
